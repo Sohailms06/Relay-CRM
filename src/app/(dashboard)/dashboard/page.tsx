@@ -1,19 +1,8 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Feedback } from "@/components/ui/feedback";
-import {
-  Building2,
-  UserCheck,
-  ShieldAlert,
-  Clock,
-  PhoneForwarded,
-  ArrowRight,
-  CheckCircle2,
-} from "lucide-react";
+import { DashboardClient, DashboardMetrics } from "./dashboard-client";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -40,180 +29,174 @@ export default async function DashboardPage() {
     .eq("status", "active")
     .maybeSingle();
 
-  let workspaceName = "Workspace";
-  let workspaceSlug = "workspace";
-  let userRole = "Member";
-
-  if (membership) {
-    userRole = membership.role.charAt(0).toUpperCase() + membership.role.slice(1);
-    const ws = membership.workspaces as unknown as { id: string; name: string; slug: string; timezone: string } | null;
-    if (ws) {
-      workspaceName = ws.name;
-      workspaceSlug = ws.slug;
-    }
+  if (!membership) {
+    redirect("/login");
   }
 
+  const ws = membership.workspaces as unknown as { id: string; name: string; slug: string; timezone: string } | null;
+  const workspaceId = ws?.id;
+  const workspaceName = ws?.name || "Workspace";
+  const workspaceSlug = ws?.slug || "workspace";
+  const userRole = membership.role.charAt(0).toUpperCase() + membership.role.slice(1);
+
+  if (!workspaceId) {
+    redirect("/login");
+  }
+
+  const now = new Date();
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+  // 1. New leads today (last 24 hours)
+  const { count: newLeadsCount } = await supabase
+    .from("leads")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .gte("created_at", twentyFourHoursAgo);
+
+  // 2. Average time to first response
+  const { data: ackEvents } = await supabase
+    .from("lead_acknowledgement_events")
+    .select("response_time_seconds")
+    .eq("workspace_id", workspaceId)
+    .not("response_time_seconds", "is", null);
+
+  let avgResponseTimeSeconds = 0;
+  if (ackEvents && ackEvents.length > 0) {
+    const total = ackEvents.reduce((acc, curr) => acc + (curr.response_time_seconds || 0), 0);
+    avgResponseTimeSeconds = Math.round(total / ackEvents.length);
+  }
+
+  // 3. Recovery Queue Items
+  const { data: allOpenLeads } = await supabase
+    .from("leads")
+    .select("id, is_missed, escalation_level, acknowledged_at, ack_deadline_at, updated_at")
+    .eq("workspace_id", workspaceId)
+    .neq("status", "missed")
+    .neq("status", "converted");
+
+  let recoveryQueueCount = 0;
+  if (allOpenLeads) {
+    recoveryQueueCount = allOpenLeads.filter((l) => {
+      const isOverdue = !l.acknowledged_at && l.ack_deadline_at && new Date(l.ack_deadline_at).getTime() < Date.now();
+      const isMultiEscalated = (l.escalation_level ?? 0) >= 2;
+      return l.is_missed || isMultiEscalated || isOverdue;
+    }).length;
+  }
+
+  // 4. Escalations in the last 24 hours
+  const { count: escalationsCount } = await supabase
+    .from("lead_escalation_events")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .gte("created_at", twentyFourHoursAgo);
+
+  // 5. Team availability
+  const { data: availabilities } = await supabase
+    .from("employee_availability")
+    .select("user_id, status, is_available, current_active_leads, max_active_leads")
+    .eq("workspace_id", workspaceId);
+
+  const { count: totalStaff } = await supabase
+    .from("workspace_members")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("status", "active");
+
+  const availableStaffCount = (availabilities || []).filter(
+    (a) => a.is_available && (a.current_active_leads ?? 0) < (a.max_active_leads ?? 10)
+  ).length;
+
+  // 6. Pipeline value (opportunities)
+  const { data: opps } = await supabase
+    .from("opportunities")
+    .select("expected_value")
+    .eq("workspace_id", workspaceId);
+
+  const openPipelineValue = (opps || []).reduce(
+    (acc, opp) => acc + (Number(opp.expected_value) || 0),
+    0
+  );
+
+  // 7. Payments collected (payments)
+  const { data: payments } = await supabase
+    .from("payments")
+    .select("amount")
+    .eq("workspace_id", workspaceId)
+    .eq("status", "succeeded");
+
+  const collectedRevenue = (payments || []).reduce(
+    (acc, p) => acc + (Number(p.amount) || 0),
+    0
+  );
+
+  // 8. Upcoming Appointments
+  const { count: upcomingApps } = await supabase
+    .from("appointments")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .gte("start_time", now.toISOString());
+
+  // 9. Trend data generation for the AgriChain chart
+  // Group leads and response events into 4-hour buckets across the past 24 hours
+  const buckets: { time: string; leads: number; avgSeconds: number; count: number; totalSec: number }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const bucketStart = new Date(now.getTime() - (i + 1) * 4 * 60 * 60 * 1000);
+    const bucketLabel = bucketStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    buckets.push({
+      time: bucketLabel,
+      leads: 0,
+      avgSeconds: 0,
+      count: 0,
+      totalSec: 0,
+    });
+  }
+
+  // Populate buckets with recent leads if available
+  const { data: recentLeads } = await supabase
+    .from("leads")
+    .select("created_at")
+    .eq("workspace_id", workspaceId)
+    .gte("created_at", twentyFourHoursAgo);
+
+  (recentLeads || []).forEach((lead) => {
+    const leadTime = new Date(lead.created_at).getTime();
+    for (let i = 0; i < 6; i++) {
+      const bStart = now.getTime() - (6 - i) * 4 * 60 * 60 * 1000;
+      const bEnd = now.getTime() - (5 - i) * 4 * 60 * 60 * 1000;
+      if (leadTime >= bStart && leadTime < bEnd) {
+        buckets[i].leads += 1;
+        break;
+      }
+    }
+  });
+
+  const trendData = buckets.map((b) => ({
+    time: b.time,
+    leads: b.leads,
+    avgSeconds: b.count > 0 ? Math.round(b.totalSec / b.count) : avgResponseTimeSeconds || 45,
+  }));
+
+  const metrics: DashboardMetrics = {
+    newLeadsToday: newLeadsCount ?? 0,
+    avgResponseTimeSeconds,
+    recoveryQueueCount,
+    escalations24h: escalationsCount ?? 0,
+    availableStaffCount,
+    totalStaffCount: totalStaff ?? 1,
+    openPipelineValue,
+    collectedRevenue,
+    upcomingAppointmentsCount: upcomingApps ?? 0,
+    trendData,
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Workspace Identity & Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#E5E5E0]">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-[#18181B]">
-              {workspaceName}
-            </h2>
-            <Badge variant="success">Live Cloud Connected</Badge>
-            <Badge variant="sage">{userRole}</Badge>
-          </div>
-          <p className="mt-1 text-xs text-[#71717A]">
-            Slug: <code className="font-mono text-[#18181B] bg-[#F4F4F0] px-1 py-0.5 rounded">{workspaceSlug}</code> · Timezone: UTC · Multi-Tenant Row Level Security active
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/leads"
-            className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium rounded-lg bg-[#1E3A2F] text-white hover:bg-[#162C24] transition-colors shadow-sm"
-          >
-            Open Leads Queue
-            <ArrowRight className="h-3.5 w-3.5 ml-1" />
-          </Link>
-        </div>
-      </div>
-
-      {/* Live Supabase Status Banner */}
-      <Feedback
-        variant="success"
-        title="Supabase Production Connection Active"
-      >
-        <p className="mt-0.5 text-xs">
-          Authenticated live against Supabase. All 28 PostgreSQL domain tables, Row Level Security policies, and atomic procedures are operating in production mode.
-        </p>
-      </Feedback>
-
-      {/* Operational Context Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Account Identity */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                Current Account
-              </CardTitle>
-              <UserCheck className="h-4 w-4 text-[#1E3A2F]" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1 pt-1">
-            <div className="text-sm font-semibold text-[#18181B]">{userName}</div>
-            <div className="text-xs text-[#71717A] truncate">{userEmail}</div>
-            <div className="pt-2 flex items-center gap-1.5 text-[11px] text-[#3D6452]">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Live Session Authenticated & Persistent</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* SLA & Deadlines */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                Acknowledgement SLA
-              </CardTitle>
-              <Clock className="h-4 w-4 text-[#1E3A2F]" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1 pt-1">
-            <div className="text-sm font-semibold text-[#18181B]">15 Minutes Standard</div>
-            <div className="text-xs text-[#71717A]">PostgreSQL deadline timer configured</div>
-            <div className="pt-2 flex items-center gap-1.5 text-[11px] text-[#71717A]">
-              <span>Tier 1 Escalation: Automatic transfer</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Workspace Security Isolation */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                Multi-Tenant Isolation
-              </CardTitle>
-              <Building2 className="h-4 w-4 text-[#1E3A2F]" />
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-1 pt-1">
-            <div className="text-sm font-semibold text-[#18181B]">Strict RLS Boundary</div>
-            <div className="text-xs text-[#71717A]">Workspace-scoped foreign keys & RLS</div>
-            <div className="pt-2 flex items-center gap-1.5 text-[11px] text-[#3D6452]">
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Cross-tenant access prevented</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Operational Queues with Meaningful Empty States */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Incoming Leads Queue */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Inbound Lead Ingestion Queue</CardTitle>
-                <CardDescription>
-                  Incoming requests awaiting acknowledgement from the assigned on-call team member.
-                </CardDescription>
-              </div>
-              <Badge variant="outline">0 Pending</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <EmptyState
-              icon={PhoneForwarded}
-              title="No Unacknowledged Leads"
-              description="All incoming leads are currently acknowledged within SLA deadlines. Inbound leads from Twilio, Telegram, or webhooks will automatically round-robin here."
-              action={
-                <Link
-                  href="/leads"
-                  className="text-xs font-semibold text-[#1E3A2F] hover:underline"
-                >
-                  Configure Ingestion Channels →
-                </Link>
-              }
-            />
-          </CardContent>
-        </Card>
-
-        {/* Escalation & Recovery Queue */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Escalations & Recovery Alerts</CardTitle>
-                <CardDescription>
-                  Leads exceeding acknowledgement deadlines requiring immediate manager intervention.
-                </CardDescription>
-              </div>
-              <Badge variant="outline">0 Breached</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <EmptyState
-              icon={ShieldAlert}
-              title="Zero SLA Breaches"
-              description="No leads have missed their acknowledgement window. The automated database escalation trigger is active and monitoring response intervals."
-              action={
-                <Link
-                  href="/recovery"
-                  className="text-xs font-semibold text-[#1E3A2F] hover:underline"
-                >
-                  View Recovery Rules →
-                </Link>
-              }
-            />
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <DashboardClient
+      metrics={metrics}
+      workspaceName={workspaceName}
+      workspaceSlug={workspaceSlug}
+      userRole={userRole}
+      userName={userName}
+      userEmail={userEmail}
+    />
   );
 }
