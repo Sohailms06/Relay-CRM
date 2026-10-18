@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- RELAY CRM â€” PRODUCTION DATABASE SCHEMA
 -- Migration: 001_initial_schema.sql
 -- Description: Core workspace-scoped schema for multi-tenant service businesses
@@ -1040,3 +1040,34 @@ BEGIN
   );
 END;
 $$;
+
+-- ==============================================================================
+-- PHASE 4: CRM & PERMISSIONS EXTENSIONS (Migration 004)
+-- ==============================================================================
+
+ALTER TABLE public.contacts 
+  ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_contacts_workspace_archive 
+  ON public.contacts(workspace_id, is_archived);
+
+CREATE INDEX IF NOT EXISTS idx_contacts_owner 
+  ON public.contacts(workspace_id, owner_id);
+
+ALTER TABLE public.companies 
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_companies_workspace_archive 
+  ON public.companies(workspace_id, is_archived);
+
+ALTER TABLE public.opportunities 
+  ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false;
+
+CREATE INDEX IF NOT EXISTS idx_opportunities_workspace_archive 
+  ON public.opportunities(workspace_id, is_archived);
+
+ALTER TABLE public.custom_field_definitions 
+  ADD COLUMN IF NOT EXISTS field_order INTEGER NOT NULL DEFAULT 0;
+

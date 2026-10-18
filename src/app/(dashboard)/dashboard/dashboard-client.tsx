@@ -40,6 +40,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import { triggerEscalationsCheckAction } from "@/app/actions/leads";
 
@@ -461,13 +462,27 @@ export function DashboardClient({
                 <span className="h-2 w-2 rounded-full bg-[#854D0E]" />
                 <span className="text-[#52525B]">Avg Response (s)</span>
               </div>
+              <div className="flex items-center gap-1.5 hidden sm:flex">
+                <span className="h-0.5 w-3 bg-[#A1A1AA] border-t border-dashed" />
+                <span className="text-[#71717A]">SLA Target (60s)</span>
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {metrics.trendData.length === 0 ? (
-            <div className="py-12 text-center text-xs text-[#71717A]">
-              Insufficient historical lead activity to render trend line. Submit a lead through the public form or manual intake to begin recording trend coordinates.
+          {!metrics.trendData.some((d) => d.leads > 0 || d.avgSeconds > 0) ? (
+            <div className="py-14 text-center text-xs text-[#71717A] flex flex-col items-center justify-center gap-2">
+              <Clock className="h-6 w-6 text-[#A1A1AA]" />
+              <p className="font-semibold text-[#18181B]">No Inbound Activity in Past 24 Hours</p>
+              <p className="max-w-md text-[#71717A]">
+                Operational arrival volume and acknowledgement speed trends will calculate automatically as leads arrive through public intake or external messaging channels.
+              </p>
+              <Link
+                href="/leads"
+                className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#1E3A2F] hover:underline"
+              >
+                Go to Leads Queue →
+              </Link>
             </div>
           ) : (
             <div className="h-64 w-full">
@@ -497,6 +512,12 @@ export function DashboardClient({
                       fontSize: "12px",
                       boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
                     }}
+                  />
+                  <ReferenceLine
+                    y={60}
+                    stroke="#A1A1AA"
+                    strokeDasharray="3 3"
+                    label={{ value: "Target (60s)", position: "insideTopRight", fill: "#71717A", fontSize: 10 }}
                   />
                   <Line
                     type="monotone"

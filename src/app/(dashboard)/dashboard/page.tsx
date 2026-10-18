@@ -136,7 +136,7 @@ export default async function DashboardPage() {
     .eq("workspace_id", workspaceId)
     .gte("start_time", now.toISOString());
 
-  // 9. Trend data generation for the AgriChain chart
+  // 9. Trend data generation for Operational Performance Chart
   // Group leads and response events into 4-hour buckets across the past 24 hours
   const buckets: { time: string; leads: number; avgSeconds: number; count: number; totalSec: number }[] = [];
   for (let i = 5; i >= 0; i--) {
@@ -151,7 +151,7 @@ export default async function DashboardPage() {
     });
   }
 
-  // Populate buckets with recent leads if available
+  // Populate buckets with real recent leads
   const { data: recentLeads } = await supabase
     .from("leads")
     .select("created_at")
@@ -170,10 +170,32 @@ export default async function DashboardPage() {
     }
   });
 
+  // Populate buckets with real acknowledgement response times (no fabricated fallbacks)
+  const { data: recentAcks } = await supabase
+    .from("lead_acknowledgement_events")
+    .select("acknowledged_at, response_time_seconds")
+    .eq("workspace_id", workspaceId)
+    .gte("acknowledged_at", twentyFourHoursAgo);
+
+  (recentAcks || []).forEach((ack) => {
+    if (!ack.acknowledged_at || ack.response_time_seconds === null) return;
+    const ackTime = new Date(ack.acknowledged_at).getTime();
+    for (let i = 0; i < 6; i++) {
+      const bStart = now.getTime() - (6 - i) * 4 * 60 * 60 * 1000;
+      const bEnd = now.getTime() - (5 - i) * 4 * 60 * 60 * 1000;
+      if (ackTime >= bStart && ackTime < bEnd) {
+        buckets[i].count += 1;
+        buckets[i].totalSec += Number(ack.response_time_seconds);
+        break;
+      }
+    }
+  });
+
   const trendData = buckets.map((b) => ({
     time: b.time,
     leads: b.leads,
-    avgSeconds: b.count > 0 ? Math.round(b.totalSec / b.count) : avgResponseTimeSeconds || 45,
+    avgSeconds: b.count > 0 ? Math.round(b.totalSec / b.count) : 0,
+    hasAckData: b.count > 0,
   }));
 
   const metrics: DashboardMetrics = {

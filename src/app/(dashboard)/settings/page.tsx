@@ -1,26 +1,49 @@
-import { ModulePlaceholder } from "@/components/layout/module-placeholder";
-import { Settings } from "lucide-react";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { SettingsClient } from "./settings-client";
 
-export default function SettingsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SettingsPage() {
+  const supabase = await createClient();
+  if (!supabase) redirect("/login");
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
+  // Fetch active workspace membership
+  const { data: member } = await supabase
+    .from("workspace_members")
+    .select("workspace_id, role")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!member || !member.workspace_id) {
+    redirect("/login");
+  }
+
+  const userRole = member.role.charAt(0).toUpperCase() + member.role.slice(1);
+
+  // Fetch workspace details
+  const { data: workspace } = await supabase
+    .from("workspaces")
+    .select("id, name, slug, industry, timezone, created_at")
+    .eq("id", member.workspace_id)
+    .single();
+
+  if (!workspace) {
+    redirect("/login");
+  }
+
   return (
-    <ModulePlaceholder
-      title="Workspace Settings & Policies"
-      moduleName="Settings"
-      description="Configure workspace timezone, SLA threshold rules, and member permissions."
-      icon={Settings}
-      promptTarget="Upcoming Prompt 11"
-      relatedTables={[
-        "workspaces",
-        "roles_permissions",
-        "dashboard_preferences",
-        "saved_filters"
-      ]}
-      plannedFeatures={[
-        "Workspace identity, logo, and business hours management",
-        "Configurable role permissions independent of base roles",
-        "Custom field schema builder",
-        "Data retention and export settings"
-      ]}
+    <SettingsClient
+      workspace={workspace}
+      userRole={userRole}
     />
   );
 }
+

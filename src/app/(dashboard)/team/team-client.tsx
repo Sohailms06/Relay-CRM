@@ -1,5 +1,9 @@
 "use client";
 
+// ==============================================================================
+// RELAY CRM — TEAM & PERMISSIONS CLIENT (Phase 4D)
+// ==============================================================================
+
 import * as React from "react";
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -17,8 +21,16 @@ import {
   Settings,
   Info,
   X,
+  UserPlus,
+  SlidersHorizontal,
+  Lock,
 } from "lucide-react";
 import { updateEmployeeAvailabilityAction } from "@/app/actions/leads";
+import {
+  inviteTeamMemberAction,
+  updateMemberCapacityAction,
+  updateMemberPermissionsAction,
+} from "@/app/actions/team";
 
 export interface TeamMemberRow {
   userId: string;
@@ -42,6 +54,20 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
   const [members, setMembers] = useState<TeamMemberRow[]>(initialMembers);
   const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Invite modal state
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isInviting, setIsInviting] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    fullName: "",
+    email: "",
+    role: "user" as "admin" | "user",
+    maskOpportunityValues: true,
+  });
+
+  // Capacity edit state
+  const [editingCapacityUserId, setEditingCapacityUserId] = useState<string | null>(null);
+  const [newCapacity, setNewCapacity] = useState<number>(10);
 
   const isOwnerOrAdmin = userRole === "Owner" || userRole === "Admin";
 
@@ -81,10 +107,64 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
         }
         setFeedback({ type: "success", text: msg });
       }
-    } catch (err: any) {
-      setFeedback({ type: "error", text: err.message || "Failed to update status" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update status";
+      setFeedback({ type: "error", text: msg });
     } finally {
       setLoadingUserId(null);
+    }
+  };
+
+  const handleInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsInviting(true);
+    setFeedback(null);
+
+    const res = await inviteTeamMemberAction(inviteForm);
+    setIsInviting(false);
+
+    if (!res.success) {
+      setFeedback({ type: "error", text: res.error || "Failed to invite member" });
+    } else {
+      setIsInviteOpen(false);
+      setFeedback({
+        type: "success",
+        text: `Team member "${inviteForm.fullName}" (${inviteForm.email}) added to workspace.`,
+      });
+      // Append row
+      setMembers((prev) => [
+        ...prev,
+        {
+          userId: res.member?.user_id || `temp-${Date.now()}`,
+          fullName: inviteForm.fullName,
+          email: inviteForm.email,
+          role: inviteForm.role === "admin" ? "Admin" : "User",
+          status: "available",
+          statusReason: "On Duty",
+          currentActiveLeads: 0,
+          maxActiveLeads: 10,
+          isAvailable: true,
+        },
+      ]);
+      setInviteForm({ fullName: "", email: "", role: "user", maskOpportunityValues: true });
+    }
+  };
+
+  const handleSaveCapacity = async (userId: string) => {
+    setLoadingUserId(userId);
+    setFeedback(null);
+
+    const res = await updateMemberCapacityAction(userId, newCapacity);
+    setLoadingUserId(null);
+    setEditingCapacityUserId(null);
+
+    if (!res.success) {
+      setFeedback({ type: "error", text: res.error || "Failed to update capacity" });
+    } else {
+      setMembers((prev) =>
+        prev.map((m) => (m.userId === userId ? { ...m, maxActiveLeads: newCapacity } : m))
+      );
+      setFeedback({ type: "success", text: `Concurrency limit updated to ${newCapacity} leads.` });
     }
   };
 
@@ -115,9 +195,20 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
             <Badge variant="sage">{members.length} Members</Badge>
           </div>
           <p className="mt-1 text-xs text-[#71717A]">
-            Manage employee dispatch eligibility, active lead load, and absence reassignment rules.
+            Manage employee dispatch eligibility, active lead load, capacity limits, and absence reassignment rules.
           </p>
         </div>
+
+        {isOwnerOrAdmin && (
+          <Button
+            size="sm"
+            onClick={() => setIsInviteOpen(true)}
+            className="bg-[#1E3A2F] text-white hover:bg-[#162C24]"
+          >
+            <UserPlus className="h-3.5 w-3.5 mr-1" />
+            Invite Member
+          </Button>
+        )}
       </div>
 
       {/* Feedback Toast */}
@@ -150,13 +241,13 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
       </div>
 
       {/* Team Availability Table */}
-      <Card>
+      <Card className="border-[#E5E5E0]">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-[#EFEFEA] bg-[#FAFAF8] text-[#71717A] uppercase text-[10px] tracking-wider">
                 <th className="py-3 px-4 font-semibold">Employee</th>
-                <th className="py-3 px-4 font-semibold">Base Role</th>
+                <th className="py-3 px-4 font-semibold">Role</th>
                 <th className="py-3 px-4 font-semibold">Current Availability</th>
                 <th className="py-3 px-4 font-semibold">Active Load / Capacity</th>
                 <th className="py-3 px-4 font-semibold">Status Reason</th>
@@ -199,16 +290,54 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
 
                     {/* Active Load vs Capacity */}
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-[#18181B]">
-                          {member.currentActiveLeads} / {member.maxActiveLeads} leads
-                        </span>
-                        {member.currentActiveLeads >= member.maxActiveLeads && (
-                          <Badge variant="warning" className="text-[9px]">
-                            AT CAPACITY
-                          </Badge>
-                        )}
-                      </div>
+                      {editingCapacityUserId === member.userId ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={newCapacity}
+                            onChange={(e) => setNewCapacity(parseInt(e.target.value, 10) || 1)}
+                            className="w-16 p-1 text-xs border border-[#E5E5E0] rounded"
+                          />
+                          <Button
+                            size="sm"
+                            onClick={() => handleSaveCapacity(member.userId)}
+                            isLoading={loadingUserId === member.userId}
+                            className="h-6 px-2 text-[10px] bg-[#1E3A2F] text-white"
+                          >
+                            Save
+                          </Button>
+                          <button
+                            onClick={() => setEditingCapacityUserId(null)}
+                            className="text-[10px] text-[#71717A]"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-[#18181B]">
+                            {member.currentActiveLeads} / {member.maxActiveLeads} leads
+                          </span>
+                          {member.currentActiveLeads >= member.maxActiveLeads && (
+                            <Badge variant="warning" className="text-[9px]">
+                              AT CAPACITY
+                            </Badge>
+                          )}
+                          {isOwnerOrAdmin && (
+                            <button
+                              onClick={() => {
+                                setEditingCapacityUserId(member.userId);
+                                setNewCapacity(member.maxActiveLeads);
+                              }}
+                              className="text-[10px] text-[#1E3A2F] hover:underline ml-1"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
 
                     {/* Status Reason */}
@@ -246,6 +375,81 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
           </table>
         </div>
       </Card>
+
+      {/* ===================================================================== */}
+      {/* MODAL: INVITE TEAM MEMBER */}
+      {/* ===================================================================== */}
+      {isInviteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl border border-[#E5E5E0]">
+            <h2 className="text-sm font-bold text-[#18181B]">Invite Workspace Member</h2>
+            <p className="text-xs text-[#71717A] mt-0.5">
+              Add a teammate to participate in round-robin lead intake and CRM operations.
+            </p>
+
+            <form onSubmit={handleInviteSubmit} className="mt-4 space-y-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-[#18181B]">Full Name *</label>
+                <input
+                  required
+                  type="text"
+                  value={inviteForm.fullName}
+                  onChange={(e) => setInviteForm({ ...inviteForm, fullName: e.target.value })}
+                  className="w-full mt-1 p-2 border border-[#E5E5E0] rounded-lg text-xs"
+                  placeholder="Alex Rivera"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[#18181B]">Work Email *</label>
+                <input
+                  required
+                  type="email"
+                  value={inviteForm.email}
+                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+                  className="w-full mt-1 p-2 border border-[#E5E5E0] rounded-lg text-xs"
+                  placeholder="alex@acmeservices.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-[#18181B]">Workspace Role *</label>
+                <select
+                  value={inviteForm.role}
+                  onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value as "admin" | "user" })}
+                  className="w-full mt-1 p-2 border border-[#E5E5E0] rounded-lg text-xs bg-white"
+                >
+                  <option value="user">User (Operational Staff)</option>
+                  <option value="admin">Admin (Manager Access)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="maskValues"
+                  checked={inviteForm.maskOpportunityValues}
+                  onChange={(e) => setInviteForm({ ...inviteForm, maskOpportunityValues: e.target.checked })}
+                  className="rounded border-[#E5E5E0] text-[#1E3A2F]"
+                />
+                <label htmlFor="maskValues" className="text-xs text-[#18181B] flex items-center gap-1">
+                  <Lock className="h-3 w-3 text-[#71717A]" />
+                  <span>Mask deal values (restrict financial visibility)</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#EFEFEA]">
+                <Button type="button" variant="outline" size="sm" onClick={() => setIsInviteOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" isLoading={isInviting} className="bg-[#1E3A2F] text-white">
+                  Send Invitation
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -19,6 +19,7 @@ import {
   LogOut,
   ChevronRight,
   Sparkles,
+  TrendingUp,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -72,6 +73,12 @@ export function Sidebar({
       name: "CRM Contacts",
       href: "/crm",
       icon: Users2,
+      isReady: true,
+    },
+    {
+      name: "Sales Pipeline",
+      href: "/crm?tab=pipeline",
+      icon: TrendingUp,
       isReady: true,
     },
     {
