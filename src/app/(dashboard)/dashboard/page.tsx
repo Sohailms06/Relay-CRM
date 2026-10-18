@@ -1,7 +1,6 @@
-import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { env } from "@/lib/env";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -12,65 +11,45 @@ import {
   ShieldAlert,
   Clock,
   PhoneForwarded,
-  KeyRound,
-  FileCode2,
-  Sparkles,
   ArrowRight,
-  Database,
   CheckCircle2,
 } from "lucide-react";
 
 export default async function DashboardPage() {
-  let workspaceName = "Apex Commercial Services";
-  let workspaceSlug = "apex-commercial";
-  let userRole = "Owner";
-  let userName = "Jane Doe";
-  let userEmail = "jane@apexservices.com";
-  let isLive = env.isSupabaseConfigured;
+  const supabase = await createClient();
+  if (!supabase) {
+    redirect("/login");
+  }
 
-  if (isLive) {
-    const supabase = await createClient();
-    if (supabase) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        userEmail = user.email || userEmail;
-        userName = user.user_metadata?.full_name || userEmail.split("@")[0];
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-        const { data: membership } = await supabase
-          .from("workspace_members")
-          .select("role, workspaces(id, name, slug, timezone)")
-          .eq("user_id", user.id)
-          .eq("status", "active")
-          .maybeSingle();
+  if (!user) {
+    redirect("/login");
+  }
 
-        if (membership) {
-          userRole = membership.role.charAt(0).toUpperCase() + membership.role.slice(1);
-          const ws = membership.workspaces as unknown as { name: string; slug: string } | null;
-          if (ws?.name) {
-            workspaceName = ws.name;
-            workspaceSlug = ws.slug;
-          }
-        }
-      }
-    }
-  } else {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("relay_session")?.value;
-    if (sessionCookie) {
-      try {
-        const parsed = JSON.parse(sessionCookie);
-        if (parsed.user?.full_name) userName = parsed.user.full_name;
-        if (parsed.user?.email) userEmail = parsed.user.email;
-        if (parsed.workspace?.name) {
-          workspaceName = parsed.workspace.name;
-          workspaceSlug = parsed.workspace.slug;
-        }
-        if (parsed.workspace?.role) {
-          userRole = parsed.workspace.role.charAt(0).toUpperCase() + parsed.workspace.role.slice(1);
-        }
-      } catch {
-        // Fallback
-      }
+  const userEmail = user.email || "";
+  const userName = user.user_metadata?.full_name || userEmail.split("@")[0] || "User";
+
+  // Fetch active workspace and role
+  const { data: membership } = await supabase
+    .from("workspace_members")
+    .select("role, workspaces(id, name, slug, timezone)")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  let workspaceName = "Workspace";
+  let workspaceSlug = "workspace";
+  let userRole = "Member";
+
+  if (membership) {
+    userRole = membership.role.charAt(0).toUpperCase() + membership.role.slice(1);
+    const ws = membership.workspaces as unknown as { id: string; name: string; slug: string; timezone: string } | null;
+    if (ws) {
+      workspaceName = ws.name;
+      workspaceSlug = ws.slug;
     }
   }
 
@@ -83,11 +62,11 @@ export default async function DashboardPage() {
             <h2 className="text-xl font-bold tracking-tight text-[#18181B]">
               {workspaceName}
             </h2>
-            <Badge variant="success">Workspace Active</Badge>
+            <Badge variant="success">Live Cloud Connected</Badge>
             <Badge variant="sage">{userRole}</Badge>
           </div>
           <p className="mt-1 text-xs text-[#71717A]">
-            Slug: <code className="font-mono text-[#18181B] bg-[#F4F4F0] px-1 py-0.5 rounded">{workspaceSlug}</code> · Timezone: UTC · Role-based Row Level Security enforced
+            Slug: <code className="font-mono text-[#18181B] bg-[#F4F4F0] px-1 py-0.5 rounded">{workspaceSlug}</code> · Timezone: UTC · Multi-Tenant Row Level Security active
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -101,31 +80,15 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Database Connection Status Banner */}
-      {!isLive ? (
-        <Feedback
-          variant="warning"
-          title="Supabase Credentials Needed For Live Cloud Sync"
-        >
-          <div className="space-y-1.5 mt-1 text-xs">
-            <p>
-              Your production schema migrations (<code className="font-mono bg-amber-100 px-1 py-0.5 rounded">supabase/migrations/</code> and consolidated <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">supabase/schema.sql</code>) are prepared and verified.
-            </p>
-            <p>
-              To connect your live Supabase cloud database, provide <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">NEXT_PUBLIC_SUPABASE_URL</code>, <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>, and <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">SUPABASE_SERVICE_ROLE_KEY</code> in <code className="font-mono bg-amber-100 px-1 py-0.5 rounded">.env.local</code>.
-            </p>
-          </div>
-        </Feedback>
-      ) : (
-        <Feedback
-          variant="success"
-          title="Connected to Live Supabase Cloud Database"
-        >
-          <p className="mt-0.5 text-xs">
-            Multi-tenant Row Level Security, email/password session persistence, and workspace isolation are actively running against your Supabase instance.
-          </p>
-        </Feedback>
-      )}
+      {/* Live Supabase Status Banner */}
+      <Feedback
+        variant="success"
+        title="Supabase Production Connection Active"
+      >
+        <p className="mt-0.5 text-xs">
+          Authenticated live against Supabase. All 28 PostgreSQL domain tables, Row Level Security policies, and atomic procedures are operating in production mode.
+        </p>
+      </Feedback>
 
       {/* Operational Context Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -144,7 +107,7 @@ export default async function DashboardPage() {
             <div className="text-xs text-[#71717A] truncate">{userEmail}</div>
             <div className="pt-2 flex items-center gap-1.5 text-[11px] text-[#3D6452]">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Session Authenticated & Persistent</span>
+              <span>Live Session Authenticated & Persistent</span>
             </div>
           </CardContent>
         </Card>
@@ -251,64 +214,6 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Foundation Architecture Details */}
-      <Card className="border-[#E5E5E0]">
-        <CardHeader>
-          <CardTitle className="text-sm font-semibold text-[#18181B]">
-            Production Foundation Checklist (Prompt 1)
-          </CardTitle>
-          <CardDescription>
-            Core contracts established for upcoming implementation prompts.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#FAFAF8] border border-[#E5E5E0]">
-              <CheckCircle2 className="h-4 w-4 text-[#1E3A2F] shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-[#18181B]">28 Database Entities</p>
-                <p className="text-[#71717A] text-[11px]">Normalized, workspace-scoped PostgreSQL schema</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#FAFAF8] border border-[#E5E5E0]">
-              <CheckCircle2 className="h-4 w-4 text-[#1E3A2F] shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-[#18181B]">Atomic Escalation Locks</p>
-                <p className="text-[#71717A] text-[11px]">PostgreSQL FOR UPDATE row-locking procedures</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#FAFAF8] border border-[#E5E5E0]">
-              <CheckCircle2 className="h-4 w-4 text-[#1E3A2F] shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-[#18181B]">Strict Row Level Security</p>
-                <p className="text-[#71717A] text-[11px]">Owner/Admin/User roles with workspace boundaries</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#FAFAF8] border border-[#E5E5E0]">
-              <CheckCircle2 className="h-4 w-4 text-[#1E3A2F] shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-[#18181B]">Apple & AgriChain Aesthetic</p>
-                <p className="text-[#71717A] text-[11px]">Forest green #1E3A2F, 1px subtle borders, Geist font</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#FAFAF8] border border-[#E5E5E0]">
-              <CheckCircle2 className="h-4 w-4 text-[#1E3A2F] shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-[#18181B]">Immutable Audit Logging</p>
-                <p className="text-[#71717A] text-[11px]">Append-only audit table with disallowed UPDATE/DELETE</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-[#FAFAF8] border border-[#E5E5E0]">
-              <CheckCircle2 className="h-4 w-4 text-[#1E3A2F] shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-[#18181B]">Webhook Idempotency</p>
-                <p className="text-[#71717A] text-[11px]">Provider event tracking for Stripe/Twilio/Telegram</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

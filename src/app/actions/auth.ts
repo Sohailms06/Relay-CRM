@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { env } from "@/lib/env";
 
 export interface AuthState {
@@ -14,10 +14,10 @@ export async function signUpAction(
   prevState: AuthState | null,
   formData: FormData
 ): Promise<AuthState> {
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
-  const fullName = formData.get("fullName") as string;
-  const workspaceName = formData.get("workspaceName") as string;
+  const fullName = (formData.get("fullName") as string)?.trim();
+  const workspaceName = (formData.get("workspaceName") as string)?.trim();
 
   if (!email || !password || !fullName || !workspaceName) {
     return { error: "All fields are required to establish your workspace." };
@@ -27,84 +27,111 @@ export async function signUpAction(
     return { error: "Password must be at least 8 characters long." };
   }
 
-  // Generate workspace slug
-  const slug = workspaceName
+  if (!env.isSupabaseConfigured) {
+    return { error: "Live Supabase credentials are required. Demo mode is disabled." };
+  }
+
+  const supabase = await createClient();
+  const admin = createAdminClient();
+
+  if (!supabase) {
+    return { error: "Failed to initialize Supabase client." };
+  }
+
+  // 1. Sign up user via Supabase Auth
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        full_name: fullName,
+      },
+    },
+  });
+
+  if (authError || !authData.user) {
+    return { error: authError?.message || "Failed to create account." };
+  }
+
+  const userId = authData.user.id;
+
+  // 2. Ensure email confirmation so user has immediate active session
+  if (admin && !authData.session) {
+    try {
+      await admin.auth.admin.updateUserById(userId, { email_confirm: true });
+    } catch {
+      // Ignore if already confirmed or permission restricted
+    }
+  }
+
+  // 3. Create company workspace
+  const slugBase = workspaceName
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+  const slug = `${slugBase || "workspace"}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  if (env.isSupabaseConfigured) {
-    const supabase = await createClient();
-    if (!supabase) {
-      return { error: "Supabase client initialization failed." };
-    }
+  // Use admin client if available to ensure atomic initial provisioning
+  const dbClient = admin || supabase;
 
-    // 1. Sign up user via Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
+  const { data: wsData, error: wsError } = await dbClient
+    .from("workspaces")
+    .insert({
+      name: workspaceName,
+      slug: slug,
+      timezone: "UTC",
+    })
+    .select()
+    .single();
+
+  if (wsError || !wsData) {
+    return { error: `Workspace provisioning failed: ${wsError?.message || "Unknown error"}` };
+  }
+
+  // 4. Assign user as Owner in workspace_members
+  const { error: memberError } = await dbClient
+    .from("workspace_members")
+    .insert({
+      workspace_id: wsData.id,
+      user_id: userId,
+      role: "owner",
+      status: "active",
+      permissions: {
+        all: true,
+        leads_read: true,
+        leads_write: true,
+        leads_delete: true,
+        crm_read: true,
+        crm_write: true,
+        settings_write: true,
+        audit_read: true,
       },
     });
 
-    if (authError || !authData.user) {
-      return { error: authError?.message || "Failed to create account." };
-    }
+  if (memberError) {
+    return { error: `Failed to assign workspace ownership: ${memberError.message}` };
+  }
 
-    const userId = authData.user.id;
+  // 5. Initialize employee availability
+  await dbClient.from("employee_availability").insert({
+    workspace_id: wsData.id,
+    user_id: userId,
+    is_available: true,
+    status_reason: "Initial Owner On-Call",
+    max_active_leads: 10,
+    current_active_leads: 0,
+  });
 
-    // 2. Create the workspace record
-    const { data: wsData, error: wsError } = await supabase
-      .from("workspaces")
-      .insert({
-        name: workspaceName,
-        slug: `${slug}-${Math.floor(1000 + Math.random() * 9000)}`,
-        timezone: "UTC",
-      })
-      .select()
-      .single();
-
-    if (wsError || !wsData) {
-      return { error: `Failed to create workspace: ${wsError?.message}` };
-    }
-
-    // 3. Add user as Owner in workspace_members
-    const { error: memberError } = await supabase
-      .from("workspace_members")
-      .insert({
-        workspace_id: wsData.id,
-        user_id: userId,
-        role: "owner",
-        status: "active",
-      });
-
-    if (memberError) {
-      return { error: `Failed to assign workspace ownership: ${memberError.message}` };
-    }
-
-    // 4. Initialize availability record
-    await supabase.from("employee_availability").insert({
-      workspace_id: wsData.id,
-      user_id: userId,
-      is_available: true,
-      status_reason: "Initial Owner On-Call",
+  // 6. Sign in to establish active cookies if session wasn't returned on signup
+  if (!authData.session) {
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
-  } else {
-    // Supabase credentials not yet supplied by user:
-    // Store demo session in cookie to test user journey end-to-end
-    const cookieStore = await cookies();
-    cookieStore.set(
-      "relay_session",
-      JSON.stringify({
-        user: { id: "demo-user-1", email, full_name: fullName },
-        workspace: { id: "demo-ws-1", name: workspaceName, slug, role: "owner" },
-      }),
-      { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production" }
-    );
+    if (signInErr) {
+      return { error: signInErr.message };
+    }
   }
 
   redirect("/dashboard");
@@ -114,53 +141,39 @@ export async function signInAction(
   prevState: AuthState | null,
   formData: FormData
 ): Promise<AuthState> {
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
 
   if (!email || !password) {
     return { error: "Please enter your email and password." };
   }
 
-  if (env.isSupabaseConfigured) {
-    const supabase = await createClient();
-    if (!supabase) {
-      return { error: "Supabase client initialization failed." };
-    }
+  if (!env.isSupabaseConfigured) {
+    return { error: "Live Supabase credentials are required. Demo mode is disabled." };
+  }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const supabase = await createClient();
+  if (!supabase) {
+    return { error: "Supabase client initialization failed." };
+  }
 
-    if (signInError) {
-      return { error: signInError.message };
-    }
-  } else {
-    // Supabase credentials pending: authenticate demo user session
-    const cookieStore = await cookies();
-    cookieStore.set(
-      "relay_session",
-      JSON.stringify({
-        user: { id: "demo-user-1", email, full_name: email.split("@")[0] },
-        workspace: { id: "demo-ws-1", name: "Apex Commercial Services", slug: "apex-commercial", role: "owner" },
-      }),
-      { path: "/", httpOnly: true, secure: process.env.NODE_ENV === "production" }
-    );
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError) {
+    return { error: signInError.message };
   }
 
   redirect("/dashboard");
 }
 
 export async function signOutAction() {
-  if (env.isSupabaseConfigured) {
-    const supabase = await createClient();
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+  const supabase = await createClient();
+  if (supabase) {
+    await supabase.auth.signOut();
   }
-
-  const cookieStore = await cookies();
-  cookieStore.delete("relay_session");
 
   redirect("/login");
 }
