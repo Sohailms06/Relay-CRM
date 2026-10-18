@@ -191,20 +191,20 @@ export function RecoveryClient({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#E5E5E0]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#E5E5E0]">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-[#18181B]">
-              Lead Recovery & Breached SLAs
-            </h2>
-            <Badge variant={items.length > 0 ? "destructive" : "success"}>
-              {items.length} In Recovery
-            </Badge>
-          </div>
-          <p className="mt-1 text-xs text-[#71717A]">
-            Supervisor intervention queue for leads with breached deadlines, 2+ escalations, or unassigned status.
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#18181B]">
+            Recovery
+          </h1>
+          <p className="mt-0.5 text-xs text-[#71717A]">
+            Supervisor intervention queue for breached deadlines and unassigned leads.
           </p>
         </div>
+        {items.length > 0 && (
+          <Badge variant="destructive">
+            {items.length} In Recovery
+          </Badge>
+        )}
       </div>
 
       {/* Feedback Toast */}
@@ -225,16 +225,15 @@ export function RecoveryClient({
         </Feedback>
       )}
 
-      {/* Criteria Info Banner */}
-      <div className="flex items-start gap-3 rounded-xl border border-[#FECACA] bg-[#FEF2F2] p-4 text-xs text-[#991B1B]">
-        <ShieldAlert className="h-5 w-5 shrink-0 text-[#991B1B] mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-semibold">Official F3.7 Lead Recovery Criteria</p>
-          <p className="text-[11px] text-[#7F1D1D] leading-relaxed">
-            Leads automatically enter the Recovery Queue when: (1) unacknowledged beyond deadline, (2) escalated 2 or more times, (3) untouched for configured idle periods, or (4) unassigned due to team capacity limits.
-          </p>
-        </div>
-      </div>
+      {/* Criteria Info Details */}
+      <details className="text-xs text-[#71717A] bg-[#FAFAF8] border border-[#E5E5E0] rounded-lg p-2.5">
+        <summary className="cursor-pointer font-medium text-[#18181B] select-none">
+          Recovery Criteria & Auto-Intervention Rules
+        </summary>
+        <p className="mt-2 text-[11px] leading-relaxed text-[#71717A]">
+          Leads qualify for recovery when: (1) unacknowledged past SLA deadline, (2) escalated 2 or more times, (3) idle beyond configured thresholds, or (4) unassigned due to team capacity limits.
+        </p>
+      </details>
 
       {/* Search Bar */}
       <div className="relative w-full sm:w-72">

@@ -54,11 +54,11 @@ export function SettingsClient({ workspace, userRole }: SettingsClientProps) {
   return (
     <div className="space-y-6 max-w-4xl">
       <div className="border-b border-[#E5E5E0] pb-4">
-        <h1 className="text-xl font-bold tracking-tight text-[#18181B]">
-          Workspace Settings & Access Governance
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#18181B]">
+          Settings
         </h1>
-        <p className="mt-1 text-xs text-[#71717A]">
-          Configure company profile, operational timezone, and verify multi-tenant role permission policies.
+        <p className="mt-0.5 text-xs text-[#71717A]">
+          Workspace profile, operational timezone, and role permissions.
         </p>
       </div>
 

@@ -457,11 +457,11 @@ export function CrmClient({
       {/* Page Title & Tab Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#E5E5E0] pb-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[#18181B]">
-            CRM & Deal Pipeline
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#18181B]">
+            CRM
           </h1>
           <p className="mt-0.5 text-xs text-[#71717A]">
-            Production contact directory, account management, multi-stage sales pipelines, and 360 customer timelines.
+            Contacts, accounts, and deal pipelines.
           </p>
         </div>
 

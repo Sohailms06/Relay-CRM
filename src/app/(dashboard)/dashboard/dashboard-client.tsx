@@ -121,43 +121,37 @@ export function DashboardClient({
   };
 
   const formatAvgTime = (sec: number) => {
-    if (sec === 0) return "0s (No Acks Yet)";
+    if (sec === 0) return "—";
     if (sec < 60) return `${sec}s`;
     const m = Math.floor(sec / 60);
     const s = sec % 60;
-    return `${m}m ${s}s`;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
   };
 
   return (
     <div className="space-y-6">
-      {/* Workspace Identity & Welcome Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#E5E5E0]">
+      {/* Page Title & Operational Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#E5E5E0]">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-[#18181B]">
-              {workspaceName}
-            </h2>
-            <Badge variant="success">Live Cloud Connected</Badge>
-            <Badge variant="sage">{userRole}</Badge>
-          </div>
-          <p className="mt-1 text-xs text-[#71717A]">
-            Slug: <code className="font-mono text-[#18181B] bg-[#F4F4F0] px-1 py-0.5 rounded">{workspaceSlug}</code> · SLA Response Window: 15 Minutes · Strict Multi-Tenant Isolation
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#18181B]">
+            Dashboard
+          </h1>
+          <p className="mt-0.5 text-xs text-[#71717A]">
+            Lead velocity, response deadlines, and dispatch capacity.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* Public Intake Link */}
           <a
             href={`/intake/${workspaceSlug}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-[#E5E5E0] bg-white text-[#18181B] hover:bg-[#F4F4F0] transition-colors shadow-xs"
+            className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium rounded-lg border border-[#E5E5E0] bg-white text-[#18181B] hover:bg-[#FAFAF8] transition-colors"
           >
-            <span>Public Intake Form</span>
-            <ExternalLink className="h-3.5 w-3.5 text-[#71717A]" />
+            <span>Public Intake</span>
+            <ExternalLink className="h-3 w-3 text-[#71717A]" />
           </a>
 
-          {/* Trigger SLA Scan */}
           <Button
             variant="outline"
             size="sm"
@@ -165,31 +159,30 @@ export function DashboardClient({
             isLoading={isScanning}
           >
             <RefreshCw className="h-3.5 w-3.5 mr-1" />
-            Scan SLAs
+            Check SLAs
           </Button>
 
-          {/* Customize Preferences */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => setShowPreferences(!showPreferences)}
           >
             <Filter className="h-3.5 w-3.5 mr-1" />
-            Customize
+            Metrics
           </Button>
 
           <Link
             href="/leads"
-            className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium rounded-lg bg-[#1E3A2F] text-white hover:bg-[#162C24] transition-colors shadow-xs gap-1.5"
+            className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium rounded-lg bg-[#1E3A2F] text-white hover:bg-[#162C24] transition-colors gap-1.5 shadow-2xs"
           >
-            <span>Leads Queue</span>
-            <ArrowRight className="h-3.5 w-3.5" />
+            <span>Leads</span>
+            <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       </div>
 
       {scanResult && (
-        <Feedback variant="info" title="SLA Scheduler Scan">
+        <Feedback variant="info" title="SLA Scan">
           <p className="text-xs">{scanResult}</p>
         </Feedback>
       )}
@@ -198,10 +191,10 @@ export function DashboardClient({
       {showPreferences && (
         <Card className="border-[#D2E0D5] bg-[#F0F5F2] p-4 text-xs">
           <div className="flex items-center justify-between pb-2 border-b border-[#D2E0D5]">
-            <span className="font-semibold text-[#1E3A2F]">Customize Dashboard Metrics Visibility</span>
+            <span className="font-semibold text-[#1E3A2F]">Customize Metric Visibility</span>
             <button
               onClick={() => setShowPreferences(false)}
-              className="text-[#1E3A2F] hover:opacity-70"
+              className="text-[#1E3A2F] hover:opacity-70 font-medium"
             >
               Done
             </button>
@@ -234,83 +227,55 @@ export function DashboardClient({
         {/* Metric 1: New Leads Today */}
         {visibleCards.leadsToday && (
           <Link href="/leads" className="block group">
-            <Card className="h-full group-hover:border-[#1E3A2F] transition-all shadow-xs">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                    New Leads Today
-                  </CardTitle>
-                  <PhoneForwarded className="h-4 w-4 text-[#1E3A2F]" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div className="text-2xl font-bold text-[#18181B]">
-                  {metrics.newLeadsToday}
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-[#71717A]">
-                  <span>Arrived in last 24 hours</span>
-                  <span className="text-[#1E3A2F] font-semibold group-hover:underline">
-                    View queue →
-                  </span>
-                </div>
-              </CardContent>
+            <Card className="h-full border-[#E5E5E0] group-hover:border-[#1E3A2F]/50 transition-all shadow-2xs p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[#71717A]">New Leads</span>
+                <PhoneForwarded className="h-4 w-4 text-[#1E3A2F]" />
+              </div>
+              <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181B]">
+                {metrics.newLeadsToday}
+              </div>
+              <p className="mt-1 text-[11px] text-[#A1A1AA]">Past 24 hours</p>
             </Card>
           </Link>
         )}
 
         {/* Metric 2: Average Time to First Response */}
         {visibleCards.responseTime && (
-          <Card className="shadow-xs">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                  Avg Response Time
-                </CardTitle>
-                <Clock className="h-4 w-4 text-[#1E3A2F]" />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              <div className="text-2xl font-bold text-[#18181B]">
-                {formatAvgTime(metrics.avgResponseTimeSeconds)}
-              </div>
-              <div className="text-[11px] text-[#71717A]">
-                First assignment to acknowledgement
-              </div>
-            </CardContent>
+          <Card className="h-full border-[#E5E5E0] shadow-2xs p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-[#71717A]">Avg Response Time</span>
+              <Clock className="h-4 w-4 text-[#1E3A2F]" />
+            </div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181B]">
+              {formatAvgTime(metrics.avgResponseTimeSeconds)}
+            </div>
+            <p className="mt-1 text-[11px] text-[#A1A1AA]">First assignment to ack</p>
           </Card>
         )}
 
-        {/* Metric 3: Recovery Queue Count (Drill-Down to /recovery) */}
+        {/* Metric 3: Recovery Queue Count */}
         {visibleCards.recovery && (
           <Link href="/recovery" className="block group">
-            <Card className="h-full group-hover:border-[#991B1B] transition-all shadow-xs">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                    Recovery Queue
-                  </CardTitle>
-                  <ShieldAlert
-                    className={`h-4 w-4 ${
-                      metrics.recoveryQueueCount > 0 ? "text-[#991B1B]" : "text-[#1E3A2F]"
-                    }`}
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div
-                  className={`text-2xl font-bold ${
-                    metrics.recoveryQueueCount > 0 ? "text-[#991B1B]" : "text-[#18181B]"
+            <Card className="h-full border-[#E5E5E0] group-hover:border-[#991B1B]/50 transition-all shadow-2xs p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[#71717A]">Recovery Queue</span>
+                <ShieldAlert
+                  className={`h-4 w-4 ${
+                    metrics.recoveryQueueCount > 0 ? "text-[#991B1B]" : "text-[#1E3A2F]"
                   }`}
-                >
-                  {metrics.recoveryQueueCount}
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-[#71717A]">
-                  <span>Breached or multi-escalated</span>
-                  <span className="text-[#991B1B] font-semibold group-hover:underline">
-                    Intervene →
-                  </span>
-                </div>
-              </CardContent>
+                />
+              </div>
+              <div
+                className={`mt-2 text-2xl font-semibold tracking-tight ${
+                  metrics.recoveryQueueCount > 0 ? "text-[#991B1B]" : "text-[#18181B]"
+                }`}
+              >
+                {metrics.recoveryQueueCount}
+              </div>
+              <p className="mt-1 text-[11px] text-[#A1A1AA]">
+                {metrics.recoveryQueueCount > 0 ? "Requires review" : "Zero breaches"}
+              </p>
             </Card>
           </Link>
         )}
@@ -318,26 +283,15 @@ export function DashboardClient({
         {/* Metric 4: Escalations in Last 24 Hours */}
         {visibleCards.escalations && (
           <Link href="/leads?filter=escalated" className="block group">
-            <Card className="h-full group-hover:border-[#854D0E] transition-all shadow-xs">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                    Escalations (24h)
-                  </CardTitle>
-                  <TrendingUp className="h-4 w-4 text-[#854D0E]" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div className="text-2xl font-bold text-[#18181B]">
-                  {metrics.escalations24h}
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-[#71717A]">
-                  <span>Automatic SLA transfers</span>
-                  <span className="text-[#854D0E] font-semibold group-hover:underline">
-                    View escalated →
-                  </span>
-                </div>
-              </CardContent>
+            <Card className="h-full border-[#E5E5E0] group-hover:border-[#854D0E]/50 transition-all shadow-2xs p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[#71717A]">Escalations (24h)</span>
+                <TrendingUp className="h-4 w-4 text-[#854D0E]" />
+              </div>
+              <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181B]">
+                {metrics.escalations24h}
+              </div>
+              <p className="mt-1 text-[11px] text-[#A1A1AA]">Automated SLA transfers</p>
             </Card>
           </Link>
         )}
@@ -348,123 +302,82 @@ export function DashboardClient({
         {/* Metric 5: Team Availability */}
         {visibleCards.staff && (
           <Link href="/team" className="block group">
-            <Card className="h-full group-hover:border-[#1E3A2F] transition-all shadow-xs">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                    Available Staff
-                  </CardTitle>
-                  <Building2 className="h-4 w-4 text-[#1E3A2F]" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div className="text-xl font-bold text-[#18181B]">
-                  {metrics.availableStaffCount} / {metrics.totalStaffCount} Active
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-[#71717A]">
-                  <span>Round-robin dispatch</span>
-                  <span className="text-[#1E3A2F] font-semibold group-hover:underline">
-                    Roster →
-                  </span>
-                </div>
-              </CardContent>
+            <Card className="h-full border-[#E5E5E0] group-hover:border-[#1E3A2F]/50 transition-all shadow-2xs p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[#71717A]">Team On-Call</span>
+                <Building2 className="h-4 w-4 text-[#1E3A2F]" />
+              </div>
+              <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181B]">
+                {metrics.availableStaffCount} <span className="text-sm font-normal text-[#71717A]">/ {metrics.totalStaffCount}</span>
+              </div>
+              <p className="mt-1 text-[11px] text-[#A1A1AA]">Eligible for dispatch</p>
             </Card>
           </Link>
         )}
 
         {/* Metric 6: Open Pipeline Value */}
         {visibleCards.pipeline && (
-          <Card className="shadow-xs">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                  Open Pipeline
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-[#1E3A2F]" />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              <div className="text-xl font-bold text-[#18181B]">
-                ${metrics.openPipelineValue.toLocaleString()}
-              </div>
-              <div className="text-[11px] text-[#71717A]">
-                Active opportunity potential
-              </div>
-            </CardContent>
+          <Card className="h-full border-[#E5E5E0] shadow-2xs p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-[#71717A]">Open Pipeline</span>
+              <TrendingUp className="h-4 w-4 text-[#1E3A2F]" />
+            </div>
+            <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181B]">
+              ${metrics.openPipelineValue.toLocaleString()}
+            </div>
+            <p className="mt-1 text-[11px] text-[#A1A1AA]">Active deal volume</p>
           </Card>
         )}
 
-        {/* Metric 7: Confirmed Revenue (Monthly Collected Payments) */}
+        {/* Metric 7: Confirmed Revenue */}
         {visibleCards.revenue && (
           <Link href="/payments" className="block group">
-            <Card className="h-full group-hover:border-[#1E3A2F] transition-all shadow-xs">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                    Monthly Revenue
-                  </CardTitle>
-                  <CreditCard className="h-4 w-4 text-[#1E3A2F]" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div className="text-xl font-bold text-[#18181B]">
-                  ${metrics.collectedRevenue.toLocaleString()}
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-[#71717A]">
-                  <span>Reconciled Stripe</span>
-                  <span className="text-[#1E3A2F] font-semibold group-hover:underline">
-                    Ledger →
-                  </span>
-                </div>
-              </CardContent>
+            <Card className="h-full border-[#E5E5E0] group-hover:border-[#1E3A2F]/50 transition-all shadow-2xs p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[#71717A]">Collected Revenue</span>
+                <CreditCard className="h-4 w-4 text-[#1E3A2F]" />
+              </div>
+              <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181B]">
+                ${metrics.collectedRevenue.toLocaleString()}
+              </div>
+              <p className="mt-1 text-[11px] text-[#A1A1AA]">Stripe reconciled</p>
             </Card>
           </Link>
         )}
 
-        {/* Metric 8: Upcoming Consultations (Google Calendar Sync) */}
+        {/* Metric 8: Upcoming Appointments */}
         {visibleCards.appointments && (
           <Link href="/calendar" className="block group">
-            <Card className="h-full group-hover:border-[#1E3A2F] transition-all shadow-xs">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                    Appointments
-                  </CardTitle>
-                  <Calendar className="h-4 w-4 text-[#1E3A2F]" />
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1">
-                <div className="text-xl font-bold text-[#18181B]">
-                  {metrics.upcomingAppointmentsCount} Scheduled
-                </div>
-                <div className="flex items-center justify-between text-[11px] text-[#71717A]">
-                  <span>Google Calendar Sync</span>
-                  <span className="text-[#1E3A2F] font-semibold group-hover:underline">
-                    Agenda →
-                  </span>
-                </div>
-              </CardContent>
+            <Card className="h-full border-[#E5E5E0] group-hover:border-[#1E3A2F]/50 transition-all shadow-2xs p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-[#71717A]">Appointments</span>
+                <Calendar className="h-4 w-4 text-[#1E3A2F]" />
+              </div>
+              <div className="mt-2 text-2xl font-semibold tracking-tight text-[#18181B]">
+                {metrics.upcomingAppointmentsCount}
+              </div>
+              <p className="mt-1 text-[11px] text-[#A1A1AA]">Google Calendar synced</p>
             </Card>
           </Link>
         )}
       </div>
 
-      {/* Chart A: AgriChain-Style Trend Line Chart */}
-      <Card className="border-[#E5E5E0] shadow-xs">
-        <CardHeader>
-          <div className="flex items-center justify-between">
+      {/* Inbound Lead Trend */}
+      <Card className="border-[#E5E5E0] shadow-2xs">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
               <CardTitle className="text-sm font-semibold text-[#18181B]">
-                Inbound Lead Ingestion & Response Activity Trend
+                Lead Volume & Response Trend
               </CardTitle>
-              <CardDescription>
-                Real-time arrival volume and average acknowledgement speed.
+              <CardDescription className="text-xs text-[#71717A]">
+                Hourly arrival volume and acknowledgement speed.
               </CardDescription>
             </div>
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-[#1E3A2F]" />
-                <span className="text-[#52525B]">Lead Volume</span>
+                <span className="text-[#52525B]">Leads</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-[#854D0E]" />
@@ -552,19 +465,19 @@ export function DashboardClient({
         </CardContent>
       </Card>
 
-      {/* 7-Day Inbound Response Activity Matrix (Genuine Operational Activity Grid) */}
-      <Card className="border-[#E5E5E0] shadow-xs">
+      {/* 7-Day Inbound Response Activity Matrix */}
+      <Card className="border-[#E5E5E0] shadow-2xs">
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
               <CardTitle className="text-sm font-semibold text-[#18181B]">
-                7-Day Operational Activity & SLA Compliance
+                7-Day SLA Activity
               </CardTitle>
-              <CardDescription>
-                Daily inbound arrival counts, team acknowledgement volume, and 60-second SLA attainment rate.
+              <CardDescription className="text-xs text-[#71717A]">
+                Daily inbound volume, team acknowledgements, and response speed.
               </CardDescription>
             </div>
-            <span className="text-[11px] text-[#71717A] bg-[#FAFAF8] px-2.5 py-1 rounded-md border border-[#E5E5E0] self-start sm:self-auto font-medium">
+            <span className="text-[11px] text-[#71717A] bg-[#FAFAF8] px-2.5 py-1 rounded-md border border-[#E5E5E0] self-start sm:self-auto font-mono">
               Rolling 7 Days
             </span>
           </div>

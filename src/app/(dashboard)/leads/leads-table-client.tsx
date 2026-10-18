@@ -326,16 +326,13 @@ export function LeadsTableClient({
   return (
     <div className="space-y-6">
       {/* Header and Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#E5E5E0]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#E5E5E0]">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-[#18181B]">
-              Leads Queue & SLA Monitor
-            </h2>
-            <Badge variant="sage">{leads.length} Total</Badge>
-          </div>
-          <p className="mt-1 text-xs text-[#71717A]">
-            Single accountable ownership enforced. All leads monitored by PostgreSQL deadline timers.
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#18181B]">
+            Leads
+          </h1>
+          <p className="mt-0.5 text-xs text-[#71717A]">
+            Inbound queue, accountable ownership, and response deadlines.
           </p>
         </div>
 
@@ -504,7 +501,7 @@ export function LeadsTableClient({
                             <span className="rounded bg-[#F4F4F0] px-1.5 py-0.2 text-[10px] text-[#52525B] uppercase font-mono">
                               {lead.source}
                             </span>
-                            <span className="text-[11px] text-[#A1A1AA]">
+                            <span className="text-[11px] text-[#A1A1AA]" suppressHydrationWarning>
                               {new Date(lead.created_at).toLocaleTimeString([], {
                                 hour: "2-digit",
                                 minute: "2-digit",

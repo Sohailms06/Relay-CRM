@@ -6,9 +6,6 @@ import { useActionState } from "react";
 import { signInAction, type AuthState } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Feedback } from "@/components/ui/feedback";
-import { ShieldCheck, ArrowRight } from "lucide-react";
 
 export default function LoginPage() {
   const [state, formAction, isPending] = useActionState<AuthState, FormData>(
@@ -17,80 +14,100 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[#FAFAF8] px-4 py-12">
-      <div className="w-full max-w-sm space-y-6">
-        {/* Brand Header */}
-        <div className="flex flex-col items-center text-center space-y-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1E3A2F] text-white shadow-sm font-bold text-base">
-            R
+    <div className="flex min-h-screen w-full bg-[#FAFAF8]">
+      {/* Left 50%: Clean Authentication Interface */}
+      <div className="flex w-full lg:w-1/2 flex-col justify-between p-8 sm:p-12 lg:p-16 xl:p-20 overflow-y-auto min-h-screen">
+        {/* Top: Wordmark */}
+        <div>
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1E3A2F] text-white text-sm font-semibold tracking-tight">
+              R
+            </div>
+            <span className="text-base font-semibold tracking-tight text-[#18181B]">
+              Relay CRM
+            </span>
           </div>
-          <h2 className="text-xl font-bold tracking-tight text-[#18181B]">
-            Sign in to Relay CRM
+        </div>
+
+        {/* Center: Auth Form (360-400px comfortable width) */}
+        <div className="w-full max-w-[380px] mx-auto my-auto py-8">
+          <div className="mb-8">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#18181B]">
+              Welcome back.
+            </h1>
+          </div>
+
+          <form action={formAction} className="space-y-4">
+            {state?.error && (
+              <div className="rounded-lg border border-red-200 bg-red-50/80 p-3 text-xs text-red-700">
+                {state.error}
+              </div>
+            )}
+
+            <Input
+              label="Email"
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="operator@company.com"
+              required
+            />
+
+            <Input
+              label="Password"
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="••••••••••••"
+              required
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full h-10 mt-2 text-sm font-medium bg-[#1E3A2F] hover:bg-[#162B23] text-white"
+              isLoading={isPending}
+            >
+              Sign in
+            </Button>
+
+            <p className="text-center text-xs text-[#71717A] pt-4">
+              Don&apos;t have a workspace?{" "}
+              <Link
+                href="/signup"
+                className="font-medium text-[#1E3A2F] hover:underline"
+              >
+                Create workspace
+              </Link>
+            </p>
+          </form>
+        </div>
+
+        {/* Quiet baseline alignment */}
+        <div className="hidden sm:block h-6" />
+      </div>
+
+      {/* Right 50%: Sophisticated, Restrained Brand Panel */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#1E3A2F] text-white flex-col justify-between p-12 xl:p-20 relative overflow-hidden select-none">
+        <div className="text-xs uppercase tracking-widest text-[#8FB79E] font-medium font-mono">
+          Relay Operational Engine
+        </div>
+
+        <div className="my-auto max-w-md space-y-4">
+          <h2 className="text-3xl xl:text-4xl font-normal tracking-tight text-[#FAFAF8] leading-[1.2]">
+            Every lead answered.<br />
+            <span className="text-[#8FB79E]">Every SLA honored.</span>
           </h2>
-          <p className="text-xs text-[#71717A]">
-            Enter your credentials to access your company workspace.
+          <p className="text-sm text-[#E8EFE9]/75 leading-relaxed font-light">
+            Engineered for high-velocity service businesses where sub-minute response speed and team accountability drive client retention.
           </p>
         </div>
 
-        {/* Login Card */}
-        <Card className="border-[#E5E5E0] shadow-sm">
-          <form action={formAction}>
-            <CardContent className="space-y-4 pt-6">
-              {state?.error && (
-                <Feedback variant="error" title="Sign In Error">
-                  {state.error}
-                </Feedback>
-              )}
-
-              <Input
-                label="Email Address"
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="operator@company.com"
-                required
-              />
-
-              <Input
-                label="Password"
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="••••••••••••"
-                required
-              />
-
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full mt-2"
-                isLoading={isPending}
-              >
-                Access Workspace
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </CardContent>
-
-            <CardFooter className="flex flex-col space-y-3 pt-2 text-center text-xs text-[#71717A]">
-              <div>
-                Don&apos;t have a workspace yet?{" "}
-                <Link
-                  href="/signup"
-                  className="font-semibold text-[#1E3A2F] hover:underline"
-                >
-                  Create one now
-                </Link>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
-
-        {/* Security Footnote */}
-        <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#A1A1AA]">
-          <ShieldCheck className="h-3.5 w-3.5 text-[#1E3A2F]" />
-          <span>Role-isolated multi-tenant workspace architecture</span>
+        <div className="flex items-center justify-between text-xs text-[#E8EFE9]/40 font-mono">
+          <span>Zero Lead Leakage</span>
+          <span>Autonomous Dispatch</span>
         </div>
       </div>
     </div>

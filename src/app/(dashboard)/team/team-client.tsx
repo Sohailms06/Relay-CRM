@@ -124,7 +124,7 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
 
         let msg = `Availability status updated to ${newStatus.replace("_", " ")}.`;
         if (res.reassignedCount && res.reassignedCount > 0) {
-          msg += ` F3.6 Policy Triggered: ${res.reassignedCount} unacknowledged lead(s) immediately transferred to eligible reps!`;
+          msg += ` ${res.reassignedCount} unacknowledged lead(s) automatically reassigned to available team members.`;
         }
         setFeedback({ type: "success", text: msg });
       }
@@ -207,16 +207,13 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#E5E5E0]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#E5E5E0]">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-xl font-bold tracking-tight text-[#18181B]">
-              Team Roster & On-Call Availability
-            </h2>
-            <Badge variant="sage">{members.length} Members</Badge>
-          </div>
-          <p className="mt-1 text-xs text-[#71717A]">
-            Manage employee dispatch eligibility, active lead load, capacity limits, and absence reassignment rules.
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#18181B]">
+            Team
+          </h1>
+          <p className="mt-0.5 text-xs text-[#71717A]">
+            On-call availability and dispatch capacity.
           </p>
         </div>
 

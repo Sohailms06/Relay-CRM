@@ -73,18 +73,17 @@ export function PaymentsClient({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-[#E5E5E0]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-[#E5E5E0]">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-[#18181B]">
-            Payments & Billing
-          </h2>
-          <p className="mt-1 text-xs text-[#71717A]">
-            Real Stripe payment intent reconciliation, client retainers, and webhook-verified collected revenue.
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-[#18181B]">
+            Payments
+          </h1>
+          <p className="mt-0.5 text-xs text-[#71717A]">
+            Reconciled revenue, payment ledger, and billing.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="sage">Stripe Test Mode</Badge>
-          <Badge variant="success">Webhook Protected</Badge>
         </div>
       </div>
 
@@ -162,10 +161,10 @@ export function PaymentsClient({
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-[#18181B] flex items-center gap-2">
             <CreditCard className="h-4 w-4 text-[#1E3A2F]" />
-            Generate Stripe Test Invoice / Checkout Session
+            Test Checkout Session
           </CardTitle>
           <CardDescription className="text-xs text-[#71717A]">
-            Create a real Stripe payment session. Upon successful test payment, the webhook verifies the intent and credits workspace revenue.
+            Generate a Stripe test session to verify payment webhook reconciliation.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -207,7 +206,7 @@ export function PaymentsClient({
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-semibold text-[#18181B]">
-              Payment Transaction Ledger
+              Transactions
             </CardTitle>
             <Badge variant="outline">{payments.length} Records</Badge>
           </div>

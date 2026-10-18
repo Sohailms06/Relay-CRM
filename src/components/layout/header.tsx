@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { Menu, Bell, Shield, CheckCircle2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Menu, Bell } from "lucide-react";
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -19,17 +18,17 @@ export function Header({
   const pathname = usePathname();
 
   const getPageTitle = (path: string) => {
-    if (path.includes("/leads")) return "Leads & SLA Escalation";
-    if (path.includes("/recovery")) return "Lead Recovery Hub";
-    if (path.includes("/crm")) return "Contacts & Companies";
-    if (path.includes("/conversations")) return "Unified Inbox";
-    if (path.includes("/payments")) return "Payment Processing";
-    if (path.includes("/calendar")) return "Calendar Bookings";
-    if (path.includes("/team")) return "Team & On-Call Shifts";
-    if (path.includes("/integrations")) return "Connected Services";
-    if (path.includes("/audit")) return "Immutable Audit Log";
-    if (path.includes("/settings")) return "Workspace Settings";
-    return "Operational Overview";
+    if (path.includes("/leads")) return "Leads";
+    if (path.includes("/recovery")) return "Recovery";
+    if (path.includes("/crm")) return "CRM";
+    if (path.includes("/conversations")) return "Conversations";
+    if (path.includes("/payments")) return "Payments";
+    if (path.includes("/calendar")) return "Calendar";
+    if (path.includes("/team")) return "Team";
+    if (path.includes("/integrations")) return "Integrations";
+    if (path.includes("/audit")) return "Audit";
+    if (path.includes("/settings")) return "Settings";
+    return "Dashboard";
   };
 
   return (
@@ -60,17 +59,20 @@ export function Header({
 
       {/* Right: Operational Status & System Health */}
       <div className="flex items-center gap-3">
-        <Badge
-          variant={isLiveDatabase ? "success" : "warning"}
-          className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium"
+        <div
+          className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] text-[#71717A] bg-[#FAFAF8] border border-[#E5E5E0]"
+          title={isLiveDatabase ? "Live database connection active" : "Database setup pending"}
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
-              isLiveDatabase ? "bg-[#1E3A2F]" : "bg-[#854D0E] animate-pulse"
+              isLiveDatabase ? "bg-[#1E3A2F]" : "bg-[#854D0E]"
             }`}
+            aria-hidden="true"
           />
-          {isLiveDatabase ? "Supabase Live" : "Pending Supabase Setup"}
-        </Badge>
+          <span className="text-[10px] font-mono text-[#52525B]">
+            {isLiveDatabase ? "Live" : "Offline"}
+          </span>
+        </div>
 
         <button
           type="button"
