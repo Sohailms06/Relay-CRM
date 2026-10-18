@@ -109,11 +109,11 @@ export default async function DashboardPage() {
   // 6. Pipeline value (opportunities)
   const { data: opps } = await supabase
     .from("opportunities")
-    .select("expected_value")
+    .select("monetary_value")
     .eq("workspace_id", workspaceId);
 
   const openPipelineValue = (opps || []).reduce(
-    (acc, opp) => acc + (Number(opp.expected_value) || 0),
+    (acc, opp) => acc + (Number(opp.monetary_value) || 0),
     0
   );
 
@@ -198,6 +198,64 @@ export default async function DashboardPage() {
     hasAckData: b.count > 0,
   }));
 
+  // 10. 7-Day Operational Activity Matrix
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const [weekLeadsRes, weekAcksRes] = await Promise.all([
+    supabase
+      .from("leads")
+      .select("created_at")
+      .eq("workspace_id", workspaceId)
+      .gte("created_at", sevenDaysAgo),
+    supabase
+      .from("lead_acknowledgement_events")
+      .select("acknowledged_at, response_time_seconds")
+      .eq("workspace_id", workspaceId)
+      .gte("acknowledged_at", sevenDaysAgo),
+  ]);
+
+  const weekLeads = weekLeadsRes.data || [];
+  const weekAcks = weekAcksRes.data || [];
+
+  const weeklyActivity: {
+    day: string;
+    date: string;
+    leadsCount: number;
+    acksCount: number;
+    avgSeconds: number;
+    complianceRate: number;
+  }[] = [];
+
+  for (let d = 6; d >= 0; d--) {
+    const dayDate = new Date(now.getTime() - d * 24 * 60 * 60 * 1000);
+    const dayStart = new Date(dayDate.getFullYear(), dayDate.getMonth(), dayDate.getDate(), 0, 0, 0).getTime();
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+    const dayLabel = dayDate.toLocaleDateString([], { weekday: "short" });
+    const dateFormatted = dayDate.toLocaleDateString([], { month: "short", day: "numeric" });
+
+    const dayLeads = weekLeads.filter((l) => {
+      const t = new Date(l.created_at).getTime();
+      return t >= dayStart && t < dayEnd;
+    });
+
+    const dayAcks = weekAcks.filter((a) => {
+      const t = new Date(a.acknowledged_at).getTime();
+      return t >= dayStart && t < dayEnd;
+    });
+
+    const compliantCount = dayAcks.filter((a) => (a.response_time_seconds ?? 999) <= 60).length;
+    const avgSec = dayAcks.length > 0 ? Math.round(dayAcks.reduce((s, a) => s + (a.response_time_seconds || 0), 0) / dayAcks.length) : 0;
+    const complianceRate = dayAcks.length > 0 ? Math.round((compliantCount / dayAcks.length) * 100) : 100;
+
+    weeklyActivity.push({
+      day: dayLabel,
+      date: dateFormatted,
+      leadsCount: dayLeads.length,
+      acksCount: dayAcks.length,
+      avgSeconds: avgSec,
+      complianceRate,
+    });
+  }
+
   const metrics: DashboardMetrics = {
     newLeadsToday: newLeadsCount ?? 0,
     avgResponseTimeSeconds,
@@ -209,6 +267,7 @@ export default async function DashboardPage() {
     collectedRevenue,
     upcomingAppointmentsCount: upcomingApps ?? 0,
     trendData,
+    weeklyActivity,
   };
 
   return (

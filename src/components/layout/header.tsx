@@ -3,7 +3,7 @@
 import * as React from "react";
 import { usePathname } from "next/navigation";
 import { Menu, Bell, Shield, CheckCircle2 } from "lucide-react";
-import { Badge } from "@/lib/../components/ui/badge";
+import { Badge } from "@/components/ui/badge";
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -35,11 +35,11 @@ export function Header({
   return (
     <header className="flex h-16 w-full items-center justify-between border-b border-[#E5E5E0] bg-[#FFFFFF] px-4 sm:px-6">
       {/* Left: Mobile Toggle & Title */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {onToggleMobileMenu && (
           <button
             onClick={onToggleMobileMenu}
-            className="rounded-lg p-1.5 text-[#71717A] hover:bg-[#F4F4F0] md:hidden"
+            className="flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center rounded-lg text-[#71717A] hover:bg-[#F4F4F0] active:bg-[#EFEFEA] md:hidden relay-focus"
             aria-label="Toggle navigation menu"
           >
             <Menu className="h-5 w-5" />
@@ -50,8 +50,10 @@ export function Header({
             <h1 className="text-sm font-semibold text-[#18181B] tracking-tight">
               {getPageTitle(pathname)}
             </h1>
-            <span className="text-xs text-[#A1A1AA]">/</span>
-            <span className="text-xs text-[#71717A] font-medium">{workspaceName}</span>
+            <span className="text-xs text-[#A1A1AA]" aria-hidden="true">/</span>
+            <span className="text-xs text-[#71717A] font-medium truncate max-w-[140px] sm:max-w-[240px]">
+              {workspaceName}
+            </span>
           </div>
         </div>
       </div>
@@ -60,7 +62,7 @@ export function Header({
       <div className="flex items-center gap-3">
         <Badge
           variant={isLiveDatabase ? "success" : "warning"}
-          className="hidden sm:inline-flex items-center gap-1.5 text-[11px]"
+          className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium"
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
@@ -70,9 +72,13 @@ export function Header({
           {isLiveDatabase ? "Supabase Live" : "Pending Supabase Setup"}
         </Badge>
 
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E5E0] bg-white text-[#71717A] hover:text-[#18181B] transition-colors cursor-pointer">
+        <button
+          type="button"
+          aria-label="System notifications"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E5E5E0] bg-white text-[#71717A] hover:text-[#18181B] hover:bg-[#F4F4F0] transition-colors relay-focus"
+        >
           <Bell className="h-4 w-4" />
-        </div>
+        </button>
       </div>
     </header>
   );

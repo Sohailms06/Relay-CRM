@@ -71,6 +71,27 @@ export function TeamClient({ initialMembers, currentUserId, userRole }: TeamClie
 
   const isOwnerOrAdmin = userRole === "Owner" || userRole === "Admin";
 
+  // Modal keyboard accessibility (Escape to close) & scroll locking
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isInviteOpen) {
+        setIsInviteOpen(false);
+      }
+    };
+
+    if (isInviteOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isInviteOpen]);
+
   const handleStatusChange = async (
     targetUserId: string,
     newStatus: "available" | "busy" | "on_leave" | "offline"

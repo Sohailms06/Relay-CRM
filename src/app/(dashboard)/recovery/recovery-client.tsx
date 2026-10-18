@@ -72,8 +72,29 @@ export function RecoveryClient({
   const [recoveryNotes, setRecoveryNotes] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
-
   const isOwnerOrAdmin = userRole === "Owner" || userRole === "Admin";
+
+  // Modal keyboard accessibility (Escape to close) & scroll locking
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isRecoverModalOpen) setIsRecoverModalOpen(false);
+        if (isReassignOpen) setIsReassignOpen(false);
+      }
+    };
+
+    if (isRecoverModalOpen || isReassignOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isRecoverModalOpen, isReassignOpen]);
 
   const handleQuickAcknowledge = async (item: RecoveryLeadItem) => {
     setActionLoading(item.id);

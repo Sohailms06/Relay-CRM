@@ -127,6 +127,28 @@ export function LeadsTableClient({
     return () => clearInterval(timer);
   }, [leads, isCheckingEscalations]);
 
+  // Modal keyboard accessibility (Escape to close) & scroll locking
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isNewLeadOpen) setIsNewLeadOpen(false);
+        if (isReassignOpen) setIsReassignOpen(false);
+      }
+    };
+
+    if (isNewLeadOpen || isReassignOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isNewLeadOpen, isReassignOpen]);
+
   // Acknowledge handler
   const handleAcknowledge = async (lead: LeadItem, actionTaken: "button_click" | "note_added" = "button_click") => {
     setActionLoading(lead.id);

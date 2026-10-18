@@ -154,6 +154,50 @@ export function CrmClient({
 
   const activePipeline = pipelines[0] || null;
 
+  // Modal & Drawer keyboard accessibility (Escape to close) & scroll locking
+  React.useEffect(() => {
+    const isAnyModalOpen =
+      isAddContactOpen ||
+      isAddCompanyOpen ||
+      isAddOppOpen ||
+      isAddStageOpen ||
+      isAddCustomFieldOpen ||
+      isSaveFilterOpen ||
+      selectedContact360 !== null;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsAddContactOpen(false);
+        setIsAddCompanyOpen(false);
+        setIsAddOppOpen(false);
+        setIsAddStageOpen(false);
+        setIsAddCustomFieldOpen(false);
+        setIsSaveFilterOpen(false);
+        setSelectedContact360(null);
+      }
+    };
+
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    isAddContactOpen,
+    isAddCompanyOpen,
+    isAddOppOpen,
+    isAddStageOpen,
+    isAddCustomFieldOpen,
+    isSaveFilterOpen,
+    selectedContact360,
+  ]);
+
   // ---------------------------------------------------------------------------
   // CONTACT ACTIONS
   // ---------------------------------------------------------------------------

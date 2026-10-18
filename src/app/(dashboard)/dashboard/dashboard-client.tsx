@@ -55,6 +55,14 @@ export interface DashboardMetrics {
   collectedRevenue: number;
   upcomingAppointmentsCount: number;
   trendData: { time: string; leads: number; avgSeconds: number }[];
+  weeklyActivity?: {
+    day: string;
+    date: string;
+    leadsCount: number;
+    acksCount: number;
+    avgSeconds: number;
+    complianceRate: number;
+  }[];
 }
 
 interface DashboardClientProps {
@@ -541,6 +549,77 @@ export function DashboardClient({
               </ResponsiveContainer>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* 7-Day Inbound Response Activity Matrix (Genuine Operational Activity Grid) */}
+      <Card className="border-[#E5E5E0] shadow-xs">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <CardTitle className="text-sm font-semibold text-[#18181B]">
+                7-Day Operational Activity & SLA Compliance
+              </CardTitle>
+              <CardDescription>
+                Daily inbound arrival counts, team acknowledgement volume, and 60-second SLA attainment rate.
+              </CardDescription>
+            </div>
+            <span className="text-[11px] text-[#71717A] bg-[#FAFAF8] px-2.5 py-1 rounded-md border border-[#E5E5E0] self-start sm:self-auto font-medium">
+              Rolling 7 Days
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
+            {(metrics.weeklyActivity || []).map((day, idx) => {
+              const hasActivity = day.leadsCount > 0 || day.acksCount > 0;
+              const isCompliant = day.complianceRate >= 90;
+              const isWarning = day.complianceRate >= 70 && day.complianceRate < 90;
+
+              return (
+                <div
+                  key={idx}
+                  className="rounded-lg border border-[#E5E5E0] bg-[#FAFAF8] p-3 flex flex-col justify-between space-y-2 hover:bg-white hover:border-[#1E3A2F]/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-[#18181B] block">{day.day}</span>
+                      <span className="text-[10px] text-[#71717A]">{day.date}</span>
+                    </div>
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        !hasActivity
+                          ? "bg-[#D4D4CE]"
+                          : isCompliant
+                          ? "bg-[#1E3A2F]"
+                          : isWarning
+                          ? "bg-[#854D0E]"
+                          : "bg-[#991B1B]"
+                      }`}
+                      title={!hasActivity ? "No Activity" : `SLA Compliance: ${day.complianceRate}%`}
+                    />
+                  </div>
+
+                  <div className="space-y-1 pt-1 border-t border-[#EFEFEA]">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#71717A]">Leads:</span>
+                      <span className="font-semibold text-[#18181B]">{day.leadsCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#71717A]">Acked:</span>
+                      <span className="font-semibold text-[#18181B]">{day.acksCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-[#71717A]">Avg Speed:</span>
+                      <span className="font-semibold text-[#1E3A2F]">
+                        {day.acksCount > 0 ? `${day.avgSeconds}s` : "—"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>

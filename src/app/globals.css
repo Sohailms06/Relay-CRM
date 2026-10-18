@@ -80,3 +80,52 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #A1A1AA;
 }
+
+/* ==============================================================================
+   RESTRAINED SHIMMER & ACCESSIBILITY UTILITIES (Phase 5A)
+   ============================================================================== */
+
+@keyframes relay-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    #EFEFEA 0%,
+    #F7F7F4 50%,
+    #EFEFEA 100%
+  );
+  background-size: 200% 100%;
+  animation: relay-shimmer 1.8s ease-in-out infinite;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer {
+    animation: none !important;
+    background: #EFEFEA !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Accessible focus ring utility */
+.relay-focus {
+  outline: none;
+}
+.relay-focus:focus-visible {
+  outline: 2px solid #1E3A2F;
+  outline-offset: 2px;
+}

@@ -154,22 +154,24 @@ export function Sidebar({
       </div>
 
       {/* Navigation Menu */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-        <div className="px-2 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-[#A1A1AA]">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3" aria-label="Main Navigation">
+        <div className="px-2.5 pb-1.5 pt-1 text-[10px] font-semibold uppercase tracking-wider text-[#A1A1AA]">
           Operations
         </div>
         {primaryNav.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href.split("?")[0]) && item.href !== "/crm?tab=pipeline");
+          const isExactActive = pathname === item.href;
           const Icon = item.icon;
 
           return (
             <Link
               key={item.name}
               href={item.href}
+              aria-current={isExactActive ? "page" : undefined}
               className={cn(
-                "group flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-colors",
-                isActive
-                  ? "bg-[#F0F5F2] text-[#1E3A2F] font-semibold"
+                "group relative flex items-center justify-between rounded-lg px-2.5 py-2 text-xs font-medium transition-all duration-150 relay-focus",
+                isExactActive
+                  ? "bg-[#E8EFE9] text-[#1E3A2F] font-semibold shadow-2xs"
                   : "text-[#52525B] hover:bg-[#F4F4F0] hover:text-[#18181B]"
               )}
             >
@@ -177,7 +179,7 @@ export function Sidebar({
                 <Icon
                   className={cn(
                     "h-4 w-4 shrink-0 transition-colors",
-                    isActive
+                    isExactActive
                       ? "text-[#1E3A2F]"
                       : "text-[#71717A] group-hover:text-[#18181B]"
                   )}
@@ -185,7 +187,7 @@ export function Sidebar({
                 <span className="truncate">{item.name}</span>
               </div>
               {item.badge && (
-                <span className="rounded bg-[#E8EFE9] px-1.5 py-0.2 text-[9px] font-medium text-[#1E3A2F]">
+                <span className="rounded bg-[#D2E0D5]/60 px-1.5 py-0.5 text-[9px] font-semibold text-[#1E3A2F]">
                   {item.badge}
                 </span>
               )}
