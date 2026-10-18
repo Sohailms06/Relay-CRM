@@ -86,6 +86,7 @@ export function DashboardClient({
     staff: true,
     pipeline: true,
     revenue: true,
+    appointments: true,
   });
 
   const toggleCard = (key: string) => {
@@ -333,8 +334,8 @@ export function DashboardClient({
         )}
       </div>
 
-      {/* Secondary Metrics Row (Team Availability, Pipeline Value, Revenue) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Secondary Metrics Row (Team Availability, Pipeline Value, Revenue, Appointments) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 5: Team Availability */}
         {visibleCards.staff && (
           <Link href="/team" className="block group">
@@ -342,7 +343,7 @@ export function DashboardClient({
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                    Available On-Call Staff
+                    Available Staff
                   </CardTitle>
                   <Building2 className="h-4 w-4 text-[#1E3A2F]" />
                 </div>
@@ -352,7 +353,7 @@ export function DashboardClient({
                   {metrics.availableStaffCount} / {metrics.totalStaffCount} Active
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-[#71717A]">
-                  <span>Eligible for round-robin dispatch</span>
+                  <span>Round-robin dispatch</span>
                   <span className="text-[#1E3A2F] font-semibold group-hover:underline">
                     Roster →
                   </span>
@@ -368,7 +369,7 @@ export function DashboardClient({
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                  Open Pipeline Value
+                  Open Pipeline
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-[#1E3A2F]" />
               </div>
@@ -384,26 +385,58 @@ export function DashboardClient({
           </Card>
         )}
 
-        {/* Metric 7: Confirmed Revenue */}
+        {/* Metric 7: Confirmed Revenue (Monthly Collected Payments) */}
         {visibleCards.revenue && (
-          <Card className="shadow-xs">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
-                  Confirmed Revenue (Month)
-                </CardTitle>
-                <CreditCard className="h-4 w-4 text-[#1E3A2F]" />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              <div className="text-xl font-bold text-[#18181B]">
-                ${metrics.collectedRevenue.toLocaleString()}
-              </div>
-              <div className="text-[11px] text-[#71717A]">
-                Reconciled Stripe payments
-              </div>
-            </CardContent>
-          </Card>
+          <Link href="/payments" className="block group">
+            <Card className="h-full group-hover:border-[#1E3A2F] transition-all shadow-xs">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
+                    Monthly Revenue
+                  </CardTitle>
+                  <CreditCard className="h-4 w-4 text-[#1E3A2F]" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                <div className="text-xl font-bold text-[#18181B]">
+                  ${metrics.collectedRevenue.toLocaleString()}
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[#71717A]">
+                  <span>Reconciled Stripe</span>
+                  <span className="text-[#1E3A2F] font-semibold group-hover:underline">
+                    Ledger →
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
+        {/* Metric 8: Upcoming Consultations (Google Calendar Sync) */}
+        {visibleCards.appointments && (
+          <Link href="/calendar" className="block group">
+            <Card className="h-full group-hover:border-[#1E3A2F] transition-all shadow-xs">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-semibold text-[#71717A] uppercase tracking-wider">
+                    Appointments
+                  </CardTitle>
+                  <Calendar className="h-4 w-4 text-[#1E3A2F]" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                <div className="text-xl font-bold text-[#18181B]">
+                  {metrics.upcomingAppointmentsCount} Scheduled
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-[#71717A]">
+                  <span>Google Calendar Sync</span>
+                  <span className="text-[#1E3A2F] font-semibold group-hover:underline">
+                    Agenda →
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         )}
       </div>
 

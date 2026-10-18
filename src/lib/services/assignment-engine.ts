@@ -396,24 +396,25 @@ export async function escalateSingleLeadAtomic({
     },
   });
 
-  // 8. Queue external notification outbox record (for Telegram bot integration)
-  await admin.from("integration_sync_events").insert({
-    workspace_id: workspaceId,
-    provider: "telegram",
-    provider_event_id: `esc-${leadId}-${nextTier}-${Date.now()}`,
-    event_type: "lead.escalated",
-    status: "received",
-    payload: {
-      lead_id: leadId,
-      title: lead.title,
-      customer_name: lead.customer_name,
-      previous_owner_id: prevOwnerId,
-      new_owner_id: nextOwnerId,
+  // 8. Queue external notification and dispatch Telegram alert
+  try {
+    const { sendLeadEscalationTelegramAlert } = await import("./telegram");
+    sendLeadEscalationTelegramAlert({
+      workspaceId,
+      lead: {
+        id: leadId,
+        title: lead.title,
+        customer_name: lead.customer_name,
+        customer_phone: lead.customer_phone,
+        customer_email: lead.customer_email,
+        ack_deadline_at: newDeadline,
+      },
       tier: nextTier,
-      trigger_reason: triggerReason,
-      new_deadline: newDeadline,
-    },
-  });
+      reason: triggerReason,
+    }).catch((err) => console.warn("Telegram dispatch notice:", err?.message || err));
+  } catch {
+    // Graceful fallback if telegram service is not directly loaded
+  }
 
   return {
     success: true,

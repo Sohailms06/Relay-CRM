@@ -52,7 +52,18 @@ export async function signUpAction(
   });
 
   if (authError || !authData.user) {
-    return { error: authError?.message || "Failed to create account." };
+    const errorMsg = authError?.message || "Failed to create account.";
+    if (
+      authError?.status === 429 ||
+      errorMsg.toLowerCase().includes("rate limit") ||
+      errorMsg.toLowerCase().includes("over_email_send_rate_limit")
+    ) {
+      return {
+        error:
+          "Supabase Auth email rate limit reached (free projects are restricted to 3–4 confirmation emails/hour on default SMTP). Please wait a few minutes before retrying, or configure Custom SMTP (e.g., Resend, SendGrid) in Supabase Dashboard → Auth → SMTP Settings.",
+      };
+    }
+    return { error: errorMsg };
   }
 
   const userId = authData.user.id;

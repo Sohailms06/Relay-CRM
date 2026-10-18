@@ -15,6 +15,18 @@ export default function SignUpPage() {
     signUpAction,
     {}
   );
+  const [cooldown, setCooldown] = React.useState(0);
+  const isRateLimited = Boolean(state?.error && state.error.toLowerCase().includes("rate limit"));
+
+  React.useEffect(() => {
+    if (isRateLimited) {
+      setCooldown(60);
+      const timer = setInterval(() => {
+        setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [state?.error, isRateLimited]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-[#FAFAF8] px-4 py-12">
@@ -84,8 +96,9 @@ export default function SignUpPage() {
                 variant="primary"
                 className="w-full mt-2"
                 isLoading={isPending}
+                disabled={isPending || cooldown > 0}
               >
-                Create Workspace & Sign In
+                {cooldown > 0 ? `Rate Limit Cooldown (${cooldown}s)` : "Create Workspace & Sign In"}
                 <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             </CardContent>

@@ -3,6 +3,10 @@
 // Tests real PostgreSQL execution of all F3, F4, and F5 operational flows
 // ==============================================================================
 
+if (!globalThis.WebSocket) {
+  globalThis.WebSocket = class {};
+}
+
 import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
