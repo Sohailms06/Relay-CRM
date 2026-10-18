@@ -46,5 +46,14 @@ export async function GET() {
     detectedEnvironmentVariableNames: detectedKeys,
     allRelatedEnvironmentVariableNamesInRuntime: allRelatedKeys,
     missingRequiredVariables: env.missingRequiredVariables,
+    urlKeyDetails: {
+      inKeys: Object.keys(process.env).includes("NEXT_PUBLIC_SUPABASE_URL"),
+      type: typeof process.env.NEXT_PUBLIC_SUPABASE_URL,
+      length: (process.env.NEXT_PUBLIC_SUPABASE_URL || "").length,
+      bracketType: typeof process.env["NEXT_PUBLIC_SUPABASE_URL"],
+      bracketLength: (process.env["NEXT_PUBLIC_SUPABASE_URL"] || "").length,
+      firstCharAscii: (process.env["NEXT_PUBLIC_SUPABASE_URL"] || "").charCodeAt(0) || null,
+      lastCharAscii: (process.env["NEXT_PUBLIC_SUPABASE_URL"] || "").charCodeAt((process.env["NEXT_PUBLIC_SUPABASE_URL"] || "").length - 1) || null,
+    },
   });
 }
