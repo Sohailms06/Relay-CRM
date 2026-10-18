@@ -215,7 +215,7 @@ export async function updateMemberCapacityAction(userId: string, maxActiveLeads:
  */
 export async function updateMemberPermissionsAction(
   targetUserId: string,
-  role: "admin" | "user",
+  role: "owner" | "admin" | "user",
   maskOpportunityValues: boolean
 ) {
   try {
@@ -235,8 +235,9 @@ export async function updateMemberPermissionsAction(
     const updatedPermissions = {
       ...((member.permissions || {}) as object),
       mask_opportunity_values: maskOpportunityValues,
-      settings_write: role === "admin",
-      audit_read: role === "admin",
+      settings_write: role === "admin" || role === "owner",
+      audit_read: role === "admin" || role === "owner",
+      leads_delete: role === "admin" || role === "owner",
     };
 
     const { error } = await admin
@@ -264,9 +265,106 @@ export async function updateMemberPermissionsAction(
 
     revalidatePath("/team");
     revalidatePath("/crm");
+    revalidatePath("/settings");
     return { success: true };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to update permissions";
     return { success: false, error: message };
   }
 }
+
+/**
+ * Allows an authorized user to switch their active role in real-time
+ * between "owner", "admin", and "user" to test permissions & financial masking.
+ * Preserves initial owner authorization in permissions metadata so the user
+ * can always switch back to owner/admin without lock-out.
+ */
+export async function switchMyRoleAction(newRole: "owner" | "admin" | "user") {
+  try {
+    const supabase = await createClient();
+    if (!supabase) throw new Error("Supabase unavailable");
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("Unauthorized");
+
+    const admin = createAdminClient();
+    if (!admin) throw new Error("Admin client unavailable");
+
+    const { data: member, error: fetchErr } = await admin
+      .from("workspace_members")
+      .select("workspace_id, role, permissions")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (fetchErr || !member || !member.workspace_id) {
+      throw new Error("Active workspace membership not found");
+    }
+
+    const currentRole = (member.role?.toLowerCase() || "user") as "owner" | "admin" | "user";
+    const existingPerms = (member.permissions || {}) as Record<string, unknown>;
+    const originalRole = (existingPerms.original_role as string) || currentRole;
+
+    // Ensure only owners or admins (or users who originally held owner/admin status) can switch
+    if (
+      originalRole !== "owner" &&
+      originalRole !== "admin" &&
+      currentRole !== "owner" &&
+      currentRole !== "admin"
+    ) {
+      throw new Error("Only Workspace Owners and Admins can switch perspective roles.");
+    }
+
+    const isTargetOwner = newRole === "owner";
+    const isTargetAdmin = newRole === "admin";
+    const isTargetUser = newRole === "user";
+
+    const updatedPermissions = {
+      ...existingPerms,
+      original_role: originalRole,
+      mask_opportunity_values: isTargetUser, // When testing as standard user, mask financials
+      settings_write: isTargetOwner || isTargetAdmin,
+      audit_read: isTargetOwner || isTargetAdmin,
+      leads_delete: isTargetOwner || isTargetAdmin,
+    };
+
+    const { error: updateErr } = await admin
+      .from("workspace_members")
+      .update({
+        role: newRole,
+        permissions: updatedPermissions,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("workspace_id", member.workspace_id)
+      .eq("user_id", user.id);
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message };
+    }
+
+    await admin.from("audit_events").insert({
+      workspace_id: member.workspace_id,
+      actor_id: user.id,
+      action: "workspace.member_role_switched",
+      entity_type: "workspace_member",
+      entity_id: user.id,
+      new_values: { previous_role: currentRole, new_role: newRole, original_role: originalRole },
+    });
+
+    revalidatePath("/", "layout");
+    revalidatePath("/dashboard");
+    revalidatePath("/team");
+    revalidatePath("/crm");
+    revalidatePath("/settings");
+    revalidatePath("/audit");
+
+    return { success: true, newRole };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to switch role";
+    return { success: false, error: message };
+  }
+}
+
