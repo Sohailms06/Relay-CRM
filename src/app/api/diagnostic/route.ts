@@ -1,0 +1,45 @@
+// ==============================================================================
+// RELAY CRM — PRODUCTION ENVIRONMENT DIAGNOSTIC ENDPOINT
+// Securely verifies whether Supabase credentials are detected in the runtime.
+// NEVER reveals raw secret values or keys.
+// ==============================================================================
+
+import { NextResponse } from "next/server";
+import { env } from "@/lib/env";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  const detectedKeys: string[] = [];
+
+  const candidates = [
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "SUPABASE_SERVICE_KEY",
+    "CRON_SECRET",
+  ];
+
+  for (const key of candidates) {
+    if (process.env[key] && process.env[key]!.trim().length > 0) {
+      detectedKeys.push(key);
+    }
+  }
+
+  return NextResponse.json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    isSupabaseConfigured: env.isSupabaseConfigured,
+    hasSupabaseUrl: Boolean(env.supabaseUrl),
+    hasAnonOrPublishableKey: Boolean(env.supabaseAnonKey),
+    hasServiceOrSecretKey: Boolean(env.supabaseServiceKey),
+    detectedEnvironmentVariableNames: detectedKeys,
+    missingRequiredVariables: env.missingRequiredVariables,
+  });
+}

@@ -28,7 +28,9 @@ export async function signUpAction(
   }
 
   if (!env.isSupabaseConfigured) {
-    return { error: "Live Supabase credentials are required. Demo mode is disabled." };
+    const missing = env.missingRequiredVariables;
+    const detail = missing.length > 0 ? ` Missing: ${missing.join(", ")}.` : "";
+    return { error: `Live Supabase credentials are required. Demo mode is disabled.${detail}` };
   }
 
   const supabase = await createClient();
@@ -149,7 +151,9 @@ export async function signInAction(
   }
 
   if (!env.isSupabaseConfigured) {
-    return { error: "Live Supabase credentials are required. Demo mode is disabled." };
+    const missing = env.missingRequiredVariables;
+    const detail = missing.length > 0 ? ` Missing: ${missing.join(", ")}.` : "";
+    return { error: `Live Supabase credentials are required. Demo mode is disabled.${detail}` };
   }
 
   const supabase = await createClient();
