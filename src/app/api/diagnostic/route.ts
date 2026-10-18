@@ -26,6 +26,10 @@ export async function GET() {
     "CRON_SECRET",
   ];
 
+  const allRelatedKeys = Object.keys(process.env).filter((k) =>
+    /SUPABASE|URL|PROJECT/i.test(k)
+  );
+
   for (const key of candidates) {
     if (process.env[key] && process.env[key]!.trim().length > 0) {
       detectedKeys.push(key);
@@ -40,6 +44,7 @@ export async function GET() {
     hasAnonOrPublishableKey: Boolean(env.supabaseAnonKey),
     hasServiceOrSecretKey: Boolean(env.supabaseServiceKey),
     detectedEnvironmentVariableNames: detectedKeys,
+    allRelatedEnvironmentVariableNamesInRuntime: allRelatedKeys,
     missingRequiredVariables: env.missingRequiredVariables,
   });
 }
