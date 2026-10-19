@@ -6,9 +6,11 @@
 // ==============================================================================
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+import { motion, useReducedMotion } from "motion/react";
 import {
   ArrowRight,
   ShieldCheck,
@@ -44,7 +46,26 @@ import {
   BellRing,
 } from "lucide-react";
 
+// Dynamically load the WebGL / R3F particle scene on client with SSR fallback
+const InteractiveParticleField = dynamic(
+  () =>
+    import("@/components/landing/interactive-particle-field").then(
+      (mod) => mod.InteractiveParticleField
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="absolute inset-0 pointer-events-none opacity-30 bg-[radial-gradient(#274A3D_1px,transparent_1px)] [background-size:24px_24px]"
+        aria-hidden="true"
+      />
+    ),
+  }
+);
+
 export default function HomePage() {
+  const heroRef = useRef<HTMLElement | null>(null);
+  const shouldReduceMotion = useReducedMotion();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"dashboard" | "leads" | "crm">("dashboard");
   const [demoRole, setDemoRole] = useState<"owner" | "admin" | "user">("owner");
@@ -235,49 +256,101 @@ export default function HomePage() {
       {/* ===================================================================== */}
       {/* 2. HERO SECTION */}
       {/* ===================================================================== */}
-      <section className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 border-b border-[#E5E5E0] bg-gradient-to-b from-[#FAFAF8] via-white to-[#FAFAF8]">
-        {/* Subtle radial pattern */}
-        <div className="absolute inset-0 bg-[radial-gradient(#D2E0D5_1px,transparent_1px)] [background-size:24px_24px] opacity-35 pointer-events-none" />
+      <section
+        ref={heroRef}
+        className="relative overflow-hidden pt-12 pb-16 sm:pt-20 sm:pb-24 border-b border-[#E5E5E0] bg-gradient-to-b from-[#FAFAF8] via-white to-[#FAFAF8]"
+      >
+        {/* Interactive Forest Green Three.js Particle Scene */}
+        <InteractiveParticleField containerRef={heroRef} />
 
-        <div className="relative mx-auto max-w-5xl px-4 sm:px-8 text-center space-y-6">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-8 text-center space-y-6">
           {/* Top Pill */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#D2E0D5] bg-[#E8EFE9] px-3.5 py-1 text-xs font-semibold text-[#1E3A2F] shadow-2xs">
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.5,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-[#D2E0D5] bg-[#E8EFE9]/90 backdrop-blur-xs px-3.5 py-1 text-xs font-semibold text-[#1E3A2F] shadow-2xs"
+          >
             <span className="h-2 w-2 rounded-full bg-[#1E3A2F] animate-pulse" />
             National University Hackathon · 15-Minute Response SLA System
-          </div>
+          </motion.div>
 
           {/* Main Headline */}
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-[#18181B] max-w-4xl mx-auto leading-[1.12]">
+          <motion.h1
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.65,
+              delay: shouldReduceMotion ? 0 : 0.08,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-[#18181B] max-w-4xl mx-auto leading-[1.12]"
+          >
             Never let a high-value customer lead go unanswered.
-          </h1>
+          </motion.h1>
 
           {/* Subtitle */}
-          <p className="text-base sm:text-lg text-[#52525B] leading-relaxed max-w-2xl mx-auto font-normal">
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.65,
+              delay: shouldReduceMotion ? 0 : 0.16,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="text-base sm:text-lg text-[#52525B] leading-relaxed max-w-2xl mx-auto font-normal"
+          >
             Relay CRM is the unified operational management platform built for service businesses with 5–30 employees.
             Atomic round-robin dispatch, strict 15-minute response deadlines, and automated recovery — with server-side financial masking.
-          </p>
+          </motion.p>
 
           {/* Dual CTAs */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
-            <Link
-              href="/signup"
-              className="w-full sm:w-auto inline-flex items-center justify-center h-11 px-6 text-sm font-semibold rounded-xl bg-[#1E3A2F] text-white hover:bg-[#162C24] transition-all shadow-md hover:shadow-lg gap-2"
-            >
-              Start Free Workspace
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/dashboard"
-              className="w-full sm:w-auto inline-flex items-center justify-center h-11 px-6 text-sm font-semibold rounded-xl border border-[#D2E0D5] bg-white text-[#18181B] hover:bg-[#F4F4F0] transition-colors shadow-2xs gap-2"
-            >
-              Explore Live Dashboard
-              <ArrowUpRight className="h-4 w-4 text-[#71717A]" />
-            </Link>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.65,
+              delay: shouldReduceMotion ? 0 : 0.24,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3"
+          >
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Link
+                href="/signup"
+                className="w-full sm:w-auto inline-flex items-center justify-center h-11 px-6 text-sm font-semibold rounded-xl bg-[#1E3A2F] text-white hover:bg-[#162C24] transition-all shadow-md hover:shadow-lg gap-2"
+              >
+                Start Free Workspace
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </motion.div>
+
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Link
+                href="/dashboard"
+                className="w-full sm:w-auto inline-flex items-center justify-center h-11 px-6 text-sm font-semibold rounded-xl border border-[#D2E0D5] bg-white/90 backdrop-blur-xs text-[#18181B] hover:bg-[#F4F4F0] transition-colors shadow-2xs gap-2"
+              >
+                Explore Live Dashboard
+                <ArrowUpRight className="h-4 w-4 text-[#71717A]" />
+              </Link>
+            </motion.div>
+          </motion.div>
 
           {/* Verification Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-10 max-w-3xl mx-auto text-left">
-            <div className="rounded-xl border border-[#E5E5E0] bg-white p-3.5 shadow-2xs">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.65,
+              delay: shouldReduceMotion ? 0 : 0.32,
+              ease: [0.22, 1, 0.36, 1],
+            }}
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-10 max-w-3xl mx-auto text-left"
+          >
+            <div className="rounded-xl border border-[#E5E5E0] bg-white/95 backdrop-blur-xs p-3.5 shadow-2xs hover:shadow-sm transition-shadow">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1E3A2F]">
                 <Clock className="h-3.5 w-3.5" />
                 <span>Response Speed</span>
@@ -286,7 +359,7 @@ export default function HomePage() {
               <p className="text-[10px] text-[#71717A] mt-0.5">Tested across live acknowledgements</p>
             </div>
 
-            <div className="rounded-xl border border-[#E5E5E0] bg-white p-3.5 shadow-2xs">
+            <div className="rounded-xl border border-[#E5E5E0] bg-white/95 backdrop-blur-xs p-3.5 shadow-2xs hover:shadow-sm transition-shadow">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1E3A2F]">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 <span>Hard SLA</span>
@@ -295,7 +368,7 @@ export default function HomePage() {
               <p className="text-[10px] text-[#71717A] mt-0.5">Automated manager escalation</p>
             </div>
 
-            <div className="rounded-xl border border-[#E5E5E0] bg-white p-3.5 shadow-2xs">
+            <div className="rounded-xl border border-[#E5E5E0] bg-white/95 backdrop-blur-xs p-3.5 shadow-2xs hover:shadow-sm transition-shadow">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1E3A2F]">
                 <Lock className="h-3.5 w-3.5" />
                 <span>Data Isolation</span>
@@ -304,7 +377,7 @@ export default function HomePage() {
               <p className="text-[10px] text-[#71717A] mt-0.5">Multi-tenant PostgreSQL policies</p>
             </div>
 
-            <div className="rounded-xl border border-[#E5E5E0] bg-white p-3.5 shadow-2xs">
+            <div className="rounded-xl border border-[#E5E5E0] bg-white/95 backdrop-blur-xs p-3.5 shadow-2xs hover:shadow-sm transition-shadow">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-[#1E3A2F]">
                 <Zap className="h-3.5 w-3.5" />
                 <span>Lead Races</span>
@@ -312,7 +385,7 @@ export default function HomePage() {
               <div className="text-xl sm:text-2xl font-black text-[#18181B] mt-1">0 Duplicates</div>
               <p className="text-[10px] text-[#71717A] mt-0.5">Atomic stored procedures</p>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -320,7 +393,13 @@ export default function HomePage() {
       {/* 3. INTERACTIVE PLATFORM SHOWCASE (Screenshots with Tabs) */}
       {/* ===================================================================== */}
       <section id="showcase" className="py-16 sm:py-24 px-4 sm:px-8 bg-white border-b border-[#E5E5E0]">
-        <div className="mx-auto max-w-6xl space-y-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto max-w-6xl space-y-8"
+        >
           <div className="text-center space-y-2 max-w-2xl mx-auto">
             <h2 className="text-xs font-bold tracking-wider uppercase text-[#1E3A2F]">
               Real Operational Software
@@ -419,14 +498,20 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ===================================================================== */}
       {/* 4. THE BROKEN WAY VS THE RELAY WAY */}
       {/* ===================================================================== */}
       <section className="py-16 sm:py-20 px-4 sm:px-8 bg-[#FAFAF8] border-b border-[#E5E5E0]">
-        <div className="mx-auto max-w-5xl space-y-10">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto max-w-5xl space-y-10"
+        >
           <div className="text-center space-y-2 max-w-2xl mx-auto">
             <h2 className="text-xs font-bold tracking-wider uppercase text-[#991B1B]">
               The Core Problem in Field Services
@@ -512,14 +597,20 @@ export default function HomePage() {
               </ul>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ===================================================================== */}
       {/* 5. THE 4 OPERATIONAL PILLARS */}
       {/* ===================================================================== */}
       <section id="pillars" className="py-16 sm:py-24 px-4 sm:px-8 bg-white border-b border-[#E5E5E0]">
-        <div className="mx-auto max-w-6xl space-y-12">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto max-w-6xl space-y-12"
+        >
           <div className="text-center space-y-2 max-w-2xl mx-auto">
             <h2 className="text-xs font-bold tracking-wider uppercase text-[#1E3A2F]">
               Engineering Architecture
@@ -602,7 +693,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ===================================================================== */}
@@ -610,7 +701,13 @@ export default function HomePage() {
       {/* (Directly addressing: "tell us the switching roles, like how one can switch?") */}
       {/* ===================================================================== */}
       <section id="role-security" className="py-16 sm:py-24 px-4 sm:px-8 bg-[#FAFAF8] border-b border-[#E5E5E0]">
-        <div className="mx-auto max-w-5xl space-y-10">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto max-w-5xl space-y-10"
+        >
           <div className="text-center space-y-2 max-w-2xl mx-auto">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-[#D2E0D5] bg-[#E8EFE9] px-3 py-0.5 text-xs font-semibold text-[#1E3A2F]">
               <ArrowRightLeft className="h-3.5 w-3.5" />
@@ -780,7 +877,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ===================================================================== */}
@@ -1081,7 +1178,13 @@ export default function HomePage() {
       {/* 10. PRE-FOOTER FINAL CTA BANNER */}
       {/* ===================================================================== */}
       <section className="py-16 sm:py-20 px-4 sm:px-8 bg-[#1E3A2F] text-white">
-        <div className="mx-auto max-w-4xl text-center space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: shouldReduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto max-w-4xl text-center space-y-6"
+        >
           <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white">
             <Sparkles className="h-3.5 w-3.5 text-[#A7F3D0]" />
             Launch in under 60 seconds
@@ -1110,7 +1213,7 @@ export default function HomePage() {
               Enter Live Demo
             </Link>
           </div>
-        </div>
+        </motion.div>
       </section>
 
       {/* ===================================================================== */}
